@@ -17,7 +17,7 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,2)
 
-cProfile.run(resAbate = optDICEeq(maxIter),file)
+cProfile.run("resAbate = optDICEeq(maxIter)",filename="test01.out")
 
 pickle_results('.',caseName,filter_dic(resAbate))
 
