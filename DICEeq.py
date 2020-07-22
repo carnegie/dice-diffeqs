@@ -318,6 +318,7 @@ def timeEvolve(state0,params):
     
     state = state0
     info = {}
+    info['cemutotper']=[] 
     tdic = {}
     timeIndex = 0
     
@@ -328,12 +329,13 @@ def timeEvolve(state0,params):
          
         dstate, infoSub = dstatedt(state,params)  # params is a global used by dstatedt
         
-        
         dictAppendEach(info,infoSub)
-        dictAppendEach(info,state)
-        dictAppendEachPrefix(info,dstate,'d')
-        dictAppendEach(info,tdic)  # adds time to info sheet
         
+        if params['saveOutput']:
+            dictAppendEach(info,state)
+            dictAppendEachPrefix(info,dstate,'d')
+            dictAppendEach(info,tdic)  # adds time to info sheet
+
         dictAddEachMultiply(state, dstate, dt)
         timeIndex += 1
     return info
@@ -454,34 +456,35 @@ def dstatedt(state,params):
 
         
     #-------------------------------------------------------------------------
-    info['ygross']=ygross
-    info['etot']=etot
-    info['eind']=eind
-    info['abateamount']=abateamount 
-    info['abatecost']=abatecost
-    info['damfrac']=damfrac
-    info['damages']=damages
-    info['y']=y
-    info['mcabate']=mcabate
-    info['c']=c
-    info['rsav']=rsav
-    info['inv']=inv
-    info['cpc']=cpc
-    info['periodu']=periodu
     info['cemutotper']=cemutotper
-    info['force'] = force
-    info['outgoingLW'] = outgoingLW
-    
-    info['pbacktime'] = params['pbacktime'][timeIndex] 
-    info['sigma'] = params['sigma'][timeIndex] 
-    info['al'] = params['al'][timeIndex] 
-    info['L'] = params['L'][timeIndex] 
-    info['miu'] = params['miu'][timeIndex] 
-    info['etree'] = params['etree'][timeIndex] 
-    info['forcoth'] = params['forcoth'][timeIndex] 
-    info['rr'] = params['rr'][timeIndex] 
-    
 
+    if params['saveOutput']:
+        info['ygross']=ygross
+        info['etot']=etot
+        info['eind']=eind
+        info['abateamount']=abateamount 
+        info['abatecost']=abatecost
+        info['damfrac']=damfrac
+        info['damages']=damages
+        info['y']=y
+        info['mcabate']=mcabate
+        info['c']=c
+        info['rsav']=rsav
+        info['inv']=inv
+        info['cpc']=cpc
+        info['periodu']=periodu
+        info['cemutotper']=cemutotper
+        info['force'] = force
+        info['outgoingLW'] = outgoingLW
+        
+        info['pbacktime'] = params['pbacktime'][timeIndex] 
+        info['sigma'] = params['sigma'][timeIndex] 
+        info['al'] = params['al'][timeIndex] 
+        info['L'] = params['L'][timeIndex] 
+        info['miu'] = params['miu'][timeIndex] 
+        info['etree'] = params['etree'][timeIndex] 
+        info['forcoth'] = params['forcoth'][timeIndex] 
+        info['rr'] = params['rr'][timeIndex] 
 
     return dstate, info
 
@@ -681,6 +684,8 @@ def optDICEeq(maxeval):
    
     startdate = datetime.datetime.now()
     
+    initParams["saveOutput"] = False
+    
     MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
     solution = midaco.run( problem, option, MIDACO_KEY )
     print(solution['x'])
@@ -692,6 +697,8 @@ def optDICEeq(maxeval):
     todayString = str(enddate.year) + str(enddate.month).zfill(2) + str(enddate.day).zfill(2) + '_' + \
         str(enddate.hour).zfill(2) + str(enddate.minute).zfill(2) + str(enddate.second).zfill(2)
 
+    initParams["saveOutput"] = True
+    
     utility,info = DICE_fun(solution['x'],initState,initParams)
     print(utility*1.e-9)
     root_dir = "."
