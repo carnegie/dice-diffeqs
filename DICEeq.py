@@ -362,7 +362,7 @@ def dstatedt(state,params):
 
     # Adjusted cost for backstop technology 
     #cost = pbacktime/1000 * sigma[t]/params['expcost2'] 
-    cost = params['pbacktime'][timeIndex]  # Cost of backstop; note 1000 constant is lost due to units change
+    cost = params['pbacktime'][timeIndex]* params['sigma'][timeIndex]/params['expcost2']  # Cost of backstop; note 1000 constant is lost due to units change
     
     # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
     ygross = (params['al'][timeIndex]  * params['L'][timeIndex] **(1 - params['gama'])) * (max(state['k'],epsilon)**params['gama'])
@@ -628,7 +628,7 @@ def optDICEeq(maxeval):
     ##############################
     if decisionType == 1:
     #act0 = [0.570765 for i in range(nDecisions)] # miu in DICE-2016
-        act0 = [0.0 for i in range(nDecisionTimes)] # start assuming you will not mitigate at all
+        act0 = [0.5 for i in range(nDecisionTimes)] # start assuming you will not mitigate at all
     # starting search value of 0.570765 is the mean value for <act0> in the default case solution.
     elif decisionType == 2:
         act0 = [1.0 for i in range(nDecisionTimes)]  +   [initParams['optlrsav'] for i in range(nDecisionTimes)]

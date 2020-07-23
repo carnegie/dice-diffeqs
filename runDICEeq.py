@@ -32,7 +32,7 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,1)
 
-cProfile.run(resAbate = optDICEeq(maxIter))
+resAbate = optDICEeq(maxIter)
 
 pickle_results('.',caseName,filter_dic(resAbate))
 
@@ -55,7 +55,8 @@ write_CSV_from_pickle(caseName)
 #----------------
 
 caseName = 'Vanilla_step5_10k'
-tlist = [0,20,40,60,80,100,120,140,160,180,200,280,300]
+maxIter = 10000
+tlist = np.arange(0,305,5)
 tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,1)
@@ -147,6 +148,20 @@ write_CSV_from_pickle(prefix+'noAbate')
 import pstats
 p = pstats.Stats('cProfile.txt')
 p.sort_stats('cumulative').print_stats(20)
+
+------------
+
+tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
+tmax = 300
+
+initState,initParams= createGlobalVariables(tmax,1,tlist,1)
+
+initParams['miu']=[0.5]
+initParams['t']=0
+initParams['timeIndex']=0
+initParams['saveOutput']=True
+
+dstatedt(initState,initParams)
 
 
 """
