@@ -1,6 +1,6 @@
 # dice-diffeqs
 
-This project is a version of DICE that is very close to the original version of DICE except that the it is written in the form of differential equations, except:
+This project is a version of DICE that is very close to the original version of DICE except that the it is written in the form of differential equations:
 1. The time-integration is separated from the differential equations being advanced in time.
 2. The times of decisions are independent of the time steps of the model.
 
