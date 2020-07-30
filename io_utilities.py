@@ -40,13 +40,13 @@ def unpickle_results ( output_path, file_name ):
     return data
 
 #%%
-def write_CSV_from_pickle(file):
-    LC = unpickle_results('.', file)
+def write_CSV_from_pickle( output_path, file):
+    LC = unpickle_results( output_path,  file)
     act = LC[2]['x']
     info = LC[4]
     #year = np.arange(2015, 2015+global_params['T']*global_params['tstep'], global_params['tstep'])
 
-    with open(file + '.csv', 'w') as f:
+    with open(output_path + '/' + file + '.csv', 'w') as f:
         for key in info.keys():
             f.write("%s,%s\n"%(key,info[key]))
         f.write("%s,%s\n" %('act',act))

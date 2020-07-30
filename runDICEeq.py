@@ -17,11 +17,11 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,2)
 
-cProfile.run("resAbate = optDICEeq(maxIter)",filename="test01.out")
+cProfile.run("resAbate = optDICEeq(maxIter, initState, initParams)",filename="test01.out")
 
-pickle_results('.',caseName,filter_dic(resAbate))
+pickle_results('./output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle(caseName)
+write_CSV_from_pickle('./output',caseName)
 
 """
 maxIter = 10000
@@ -32,11 +32,11 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,1)
 
-resAbate = optDICEeq(maxIter)
+resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',caseName,filter_dic(resAbate))
+pickle_results('./output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle(caseName)
+write_CSV_from_pickle('./output',caseName)
 
 
 maxIter = 10000
@@ -47,11 +47,11 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,1)
 
-resAbate = optDICEeq(maxIter)
+resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',caseName,filter_dic(resAbate))
+pickle_results('./output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle(caseName)
+write_CSV_from_pickle('./output',caseName)
 #----------------
 
 caseName = 'Vanilla_step5_10k'
@@ -61,11 +61,11 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,1)
 
-resAbate = optDICEeq(maxIter)
+resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',caseName,filter_dic(resAbate))
+pickle_results('./output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle(caseName)
+write_CSV_from_pickle('./output',caseName)
 
 #----------------
 
@@ -76,11 +76,11 @@ tmax = 300
 
 initState,initParams= createGlobalVariables(tmax,1,tlist,1)
 
-resAbate = optDICEeq(maxIter)
+resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',caseName,filter_dic(resAbate))
+pickle_results('./output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle(caseName)
+write_CSV_from_pickle('./output',caseName)
 
 
 
@@ -97,20 +97,20 @@ for rAbate in [1.,2.,5.,10.]:
         initParams['a1'] = initParams['a1'] * rDamage
         initParams['a2'] = initParams['a2'] * rDamage
         
-        resAbate = optDICEeq(maxIter)
+        resAbate = optDICEeq(maxIter, initState, initParams)
         
-        pickle_results('.',caseName,filter_dic(resAbate))
+        pickle_results('./output',caseName,filter_dic(resAbate))
         
-        write_CSV_from_pickle(caseName)
+        write_CSV_from_pickle('./output',caseName)
         
 # no abatement case
 initState,initParams= createGlobalVariables(tmax,1,tlist,2)
 
 
 
-resnoAbate = optDICEeq(maxIter)
+resnoAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',prefix+'noAbate',filter_dic(resnoAbate ))
+pickle_results('./output',prefix+'noAbate',filter_dic(resnoAbate ))
 
 write_CSV_from_pickle(prefix+'noAbate')
 
@@ -126,9 +126,9 @@ tmax = 300
 # case with abatement
 initState,initParams= createGlobalVariables(tmax,1,tlist,2)
 
-resAbate = optDICEeq(maxIter)
+resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',prefix+'abate',filter_dic(resAbate))
+pickle_results('./output',prefix+'abate',filter_dic(resAbate))
 
 write_CSV_from_pickle(prefix+'abate')
 
@@ -137,9 +137,9 @@ initState,initParams= createGlobalVariables(tmax,1,tlist,2)
 
 initParams['pback'] = 1000000 * initParams['pback']
 
-resnoAbate = optDICEeq(maxIter)
+resnoAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('.',prefix+'noAbate',filter_dic(resnoAbate ))
+pickle_results('./output',prefix+'noAbate',filter_dic(resnoAbate ))
 
 write_CSV_from_pickle(prefix+'noAbate')
 

@@ -585,9 +585,9 @@ utils.csvWriteScalar('test10s.csv',pa)
 #########################   MAIN PROGRAM   #############################
 ########################################################################
   
-def optDICEeq(maxeval):
+def optDICEeq(maxeval,initState,initParams):
     #relies on globals <initState>, <params>
-    global initState,initParams
+    #global initState,initParams
     
     nDecisionTimes = len(initParams['decisionTimes'])
     decisionType =  initParams['decisionType']
@@ -618,7 +618,7 @@ def optDICEeq(maxeval):
     # STEP 1.B: Lower and upper bounds 'xl' & 'xu'
     ##############################################
     actlower = [0.0 for i in range(nDecisions)]
-    actupper = [1.0 for i in range(nDecisions)] # range(30)]
+    actupper = [initParams['limmiu'] for i in range(nDecisions)] # range(30)]
     #actupper[30:] = [initParams['limmiu']] * (nDecisions-30)
     
     problem['xl'] = actlower
@@ -686,7 +686,11 @@ def optDICEeq(maxeval):
     
     initParams["saveOutput"] = False
     
-    MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
+    if os.getlogin()=='kcaldeira':
+        MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
+    else:
+        MIDACO_KEY = b'Candise_Henry(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
+        
     solution = midaco.run( problem, option, MIDACO_KEY )
     print(solution['x'])
     
