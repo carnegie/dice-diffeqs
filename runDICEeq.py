@@ -9,13 +9,35 @@ from plot_utilities import *
 from io_utilities import *
 import cProfile
 
-maxIter = 1000
-caseName = 'cProfile_DICEeq'
 
-tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
+maxIter = 10000
+
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,120,140,160,180,200,250,280,290, 295, 300]
 tmax = 300
 
-initState,initParams= createGlobalVariables(tmax,1,tlist,2)
+for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175,150,125,100,75,50,25,0]:
+    
+    print(initCost)
+
+    caseName = 'learningCurve_'+str(initCost)+'_1e10_10'
+    initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, learningCurveInitCost = initCost, learningCurveInitAmount = 1e10)
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('./output',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('./output',caseName)
+
+
+"""
+maxIter = 10000
+caseName = 'cProfile_DICEeq'
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,120,140,160,180,200,250,280,290, 295, 300]
+tmax = 300
+
+initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 cProfile.run("resAbate = optDICEeq(maxIter, initState, initParams)",filename="test01.out")
 
@@ -23,14 +45,33 @@ pickle_results('./output',caseName,filter_dic(resAbate))
 
 write_CSV_from_pickle('./output',caseName)
 
-"""
+
+
+
+maxIter = 10000
+caseName = 'learningCurve_550_1e10_10'
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,120,140,160,180,200,250,280,290, 295, 300]
+tmax = 300
+
+initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, learningCurveInitCost = 550., learningCurveInitAmount = 1e10)
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('./output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('./output',caseName)
+
+
+
+
 maxIter = 10000
 caseName = 'Vanilla_step10_10k'
 
 tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
 tmax = 300
 
-initState,initParams= createGlobalVariables(tmax,1,tlist,1)
+initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
@@ -45,7 +86,7 @@ caseName = 'Vanilla_step10_10k'
 tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
 tmax = 300
 
-initState,initParams= createGlobalVariables(tmax,1,tlist,1)
+initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
@@ -59,7 +100,7 @@ maxIter = 10000
 tlist = np.arange(0,305,5)
 tmax = 300
 
-initState,initParams= createGlobalVariables(tmax,1,tlist,1)
+initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
@@ -74,7 +115,7 @@ caseName = 'Vanilla_step20_10k'
 tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,110,120,130,140,160,180,200,280,300]
 tmax = 300
 
-initState,initParams= createGlobalVariables(tmax,1,tlist,1)
+initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
@@ -104,7 +145,7 @@ for rAbate in [1.,2.,5.,10.]:
         write_CSV_from_pickle('./output',caseName)
         
 # no abatement case
-initState,initParams= createGlobalVariables(tmax,1,tlist,2)
+initState,initParams= createGlobalVariables(tmax,1,tlist, decisionType = 2)
 
 
 
@@ -124,7 +165,7 @@ tmax = 300
 
 
 # case with abatement
-initState,initParams= createGlobalVariables(tmax,1,tlist,2)
+initState,initParams= createGlobalVariables(tmax,1,tlist, decisionType = 2)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
@@ -133,7 +174,7 @@ pickle_results('./output',prefix+'abate',filter_dic(resAbate))
 write_CSV_from_pickle(prefix+'abate')
 
 # no abatement case
-initState,initParams= createGlobalVariables(tmax,1,tlist,2)
+initState,initParams= createGlobalVariables(tmax,1,tlist, decisionType = 2)
 
 initParams['pback'] = 1000000 * initParams['pback']
 
@@ -154,7 +195,7 @@ p.sort_stats('cumulative').print_stats(20)
 tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
 tmax = 300
 
-initState,initParams= createGlobalVariables(tmax,1,tlist,1)
+initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 initParams['miu']=[0.5]
 initParams['t']=0

@@ -97,15 +97,59 @@ MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
 
 #%%
 
-def createGlobalVariables(timeEnd,dt,decisionTimes,decisionType):
+# Note: In the following function these keyword arguments are allowed:
+
+#  decisionType == 1 --> opt on miu (default), 
+#                  2 --> opt on miu and savings rate, 
+#                  3 --> opt on savings rate
+
+# learningCurve == False --> DICE formulation (default),
+#                  True --> learning Curve
+
+# if learningCurve is True, then the following keywords must be applied:
+
+# learningCurveInitAmount --> initial cumulative abatement, default = 1
+# learningCurveInitCost --> initial cost on leaning curve, default = $550 / tonCO2
+# learningCurveExponent --> exponent on learning curve (15% per doubling), 15% per doubling = 0.20163386117
+#                                                              default =   10% per doubling = 0.13750352375
+
+def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
     # creates <initState> and <initParams>
     print('returning  variables <initState> and <initParams>')
     #print(initState)
     initParams = {}
     initState = {}
     
+    if 'decisionType' in kwargs.keys():
+        initParams['decisionType'] = kwargs['decisionType']
+    else:
+        initParams['decisionType'] = 1
+        
+    if 'learningCurve' in kwargs.keys():
+        initParams['learningCurve'] = kwargs['learningCurve']
+        if initParams['learningCurve']:
+            if 'learningCurveInitAmount' in kwargs.keys():
+                initParams['learningCurveInitAmount'] = kwargs['learningCurveInitAmount']
+            else:
+                initParams['learningCurveInitAmount'] = 1e10
+            if 'learningCurveInitCost' in kwargs.keys():
+                initParams['learningCurveInitCost'] = kwargs['learningCurveInitCost']
+            else:
+                initParams['learningCurveInitCost'] = 550
+            if 'learningCurveExponent' in kwargs.keys():
+                initParams['learningCurveExponent'] = kwargs['learningCurveExponent']
+            else:
+                initParams['learningCurveExponent'] = 0.13750352375
+            initParams['learningCurveConstant'] = \
+                initParams['learningCurveInitCost']/initParams['learningCurveInitAmount']**-initParams['learningCurveExponent']
+    else:
+        initParams['learningCurve'] = False
+    
+    if initParams['learningCurve']:
+        initState['cumAbate'] = initParams['learningCurveInitAmount']
+        
     initParams['decisionTimes'] = decisionTimes
-    initParams['decisionType'] = decisionType
+
     initParams['timeEnd'] = timeEnd
     initParams['dt'] = dt
     tlist = np.arange(0,timeEnd+dt,dt)
@@ -207,6 +251,7 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,decisionType):
     initState['mat'] = 851 * 1e9 * 44/12. # tCO2 equivalent  Initial carbon content of atmosphere 2015 (GtC)        /851    /
     initState['mu'] =  460 * 1e9 * 44/12. # tCO2 equivalent    Initial carbon content of upper strata 2015 (GtC)      /460    /
     initState['ml'] =  1740 * 1e9 * 44/12. # tCO2 equivalent    Initial carbon content of lower strata 2015 (GtC)      /1740   /
+    
     initParams['mateq'] = 588 * 1e9 * 44/12. # tCO2 equivalent   Equilibrium concentration atmosphere  (GtC)           /588    /
     initParams['mueq'] =   360 * 1e9 * 44/12. # tCO2 equivalent  Equilibrium carbon content of upper strata (GtC)       /360    /
     initParams['mleq'] =  1720 * 1e9 * 44/12. # tCO2 equivalent   Equilibrium carbon content of lower strata (GtC)       /1720   /
@@ -220,8 +265,10 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,decisionType):
     initParams['t2xco2'] = 3.1 #  Equilibrium temp impact (oC per doubling CO2)    / 3.1  /
     initParams['fex0'] =  0.5 #   2015 forcings of non-CO2 GHG (Wm-2)              / 0.5  /
     initParams['fex1'] =  1.0 #   2100 forcings of non-CO2 GHG (Wm-2)              / 1.0  /
+    
     initState['tocean'] = 0.0068 #  Initial lower stratum temp change (C from 1900)  /.0068 /
     initState['tatm'] =  0.85 #  Initial atmospheric temp change (C from 1900)    /0.85  /
+    
     initParams['c1'] =   1. - (1.-0.1005)**0.2  #
     # c1 is heat capacity in strange units
     # Nordhaus's units are temperature change per 5 years per 1 W/m2 radiative imbalance.
@@ -250,6 +297,7 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,decisionType):
     #initParams['tnopol'] =    Period before which no emissions controls base  / 45   /
     #initParams['cprice0'] =   Initial base carbon price (2010$ per tCO2)      / 2    /
     #initParams['gcprice'] =   Growth rate of base carbon price per year       /.02   /
+
     
     return initState,initParams
 
@@ -361,8 +409,14 @@ def dstatedt(state,params):
     #--------------------------------------------------------------------------
 
     # Adjusted cost for backstop technology 
+    if initParams['learningCurve']:
+        cumAbate = state['cumAbate']
+        pbacktime =  params['learningCurveConstant'] * cumAbate ** -params['learningCurveExponent']
+    else:
+        pbacktime = params['pbacktime'][timeIndex]
+        
     #cost = pbacktime/1000 * sigma[t]/params['expcost2'] 
-    cost = params['pbacktime'][timeIndex]* params['sigma'][timeIndex]/params['expcost2']  # Cost of backstop; note 1000 constant is lost due to units change
+    cost = pbacktime * params['sigma'][timeIndex]/params['expcost2']  # Cost of backstop; note 1000 constant is lost due to units change
     
     # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
     ygross = (params['al'][timeIndex]  * params['L'][timeIndex] **(1 - params['gama'])) * (max(state['k'],epsilon)**params['gama'])
@@ -454,6 +508,9 @@ def dstatedt(state,params):
     # Deep ocean C carbon content crease at t+1 (tC from 1750)
     dstate['ml'] = params['b23']*( state['mu'] - state['ml']*params['mueq']/params['mleq'])
 
+    #-------------------------------------------------------------------------
+    if initParams['learningCurve']:
+        dstate['cumAbate'] = abateamount
         
     #-------------------------------------------------------------------------
     info['cemutotper']=cemutotper
@@ -477,7 +534,7 @@ def dstatedt(state,params):
         info['force'] = force
         info['outgoingLW'] = outgoingLW
         
-        info['pbacktime'] = params['pbacktime'][timeIndex] 
+        info['pbacktime'] = pbacktime 
         info['sigma'] = params['sigma'][timeIndex] 
         info['al'] = params['al'][timeIndex] 
         info['L'] = params['L'][timeIndex] 
