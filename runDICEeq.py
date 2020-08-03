@@ -9,7 +9,6 @@ from plot_utilities import *
 from io_utilities import *
 import cProfile
 
-
 maxIter = 10000
 
 
@@ -20,8 +19,13 @@ for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175
     
     print(initCost)
 
-    caseName = 'learningCurve_'+str(initCost)+'_1e10_10'
-    initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, learningCurveInitCost = initCost, learningCurveInitAmount = 1e10)
+    caseName = 'learningCurve_'+str(initCost)+'_uknwn_10_10k'
+    
+
+    const = 550.* 1e10**0.13750352375
+    amount = (initCost/const)**(-1./0.13750352375)
+    print(initCost,amount)
+    initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, learningCurveInitCost = initCost, learningCurveInitAmount = amount)
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
@@ -31,6 +35,27 @@ for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175
 
 
 """
+
+maxIter = 100000
+
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,120,140,160,180,200,250,280,290, 295, 300]
+tmax = 300
+
+for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175,150,125,100,75,50,25,0]:
+    
+    print(initCost)
+
+    caseName = 'learningCurve_'+str(initCost)+'_1e10_10_100k'
+    initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, learningCurveInitCost = initCost, learningCurveInitAmount = 1e10)
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('./output',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('./output',caseName)
+
+
 maxIter = 10000
 caseName = 'cProfile_DICEeq'
 
