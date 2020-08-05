@@ -9,6 +9,139 @@ from plot_utilities import *
 from io_utilities import *
 import cProfile
 
+
+maxIter = 10000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+#for initCost in [25,50,100,200,400,800,1600,3200,6400,12800,25600,51200,102400]:
+for initCost in [275,550,1100,2200,4400,8800,17600,35200]:
+    initAmount = 1100. * 1e9**0.15200309344504995
+    
+    const = 1100.* 1e9*0.15200309344504995
+    amount = (initCost/const)**(-1./0.15200309344504995)
+        
+    print(initCost, initAmount)
+
+    caseName = 'dual_learning_'+str(initCost)+'_3f_10k'  # f for following
+    
+    initState,initParams= createGlobalVariables(tmax,1,tlist, 
+                                                learningCurveOption = 3,
+                                                learningCurveInitCost = [550.,initCost],
+                                                learningCurveInitAmount = [1e10,amount],
+                                                learningCurveExponent = [0.15200309344504995, 0.15200309344504995]
+                                                )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('./output_10_09',caseName)
+
+
+
+"""
+
+maxIter = 10000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+for initCost in [25,50,100,200,400,800,1600,3200,6400,12800,25600,51200,102400]:
+        
+    print(initCost)
+
+    caseName = 'dual_learning_'+str(initCost)+'_3_10k'
+    
+    initState,initParams= createGlobalVariables(tmax,1,tlist, 
+                                                learningCurveOption = 3,
+                                                learningCurveInitCost = [550., initCost],
+                                                learningCurveInitAmount = [1e10,1e9],
+                                                learningCurveExponent = [0.15200309344504995, 0.15200309344504995]
+                                                )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('./output_10_09',caseName)
+    
+
+maxIter = 10000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+for initCost in [550,1100,2200,4400,8800,17600,35200]:
+        
+    print(initCost)
+
+    caseName = 'dual_learning_'+str(initCost)+'_3_10k'
+    
+    initState,initParams= createGlobalVariables(tmax,1,tlist, 
+                                                learningCurveOption = 3,
+                                                learningCurveInitCost = [550., initCost],
+                                                learningCurveInitAmount = [1e10,1e9],
+                                                learningCurveExponent = [0.15200309344504995, 0.15200309344504995]
+                                                )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('./output_10_09',caseName)
+    
+
+
+maxIter = 10000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290, 295, 300]
+tmax = 300
+
+for initCost in [767,769,766,768]:
+        
+    print(initCost)
+
+    caseName = 'dual_learning_'+str(initCost)+'_10k'
+    
+    initState,initParams= createGlobalVariables(tmax,1,tlist, 
+                                                learningCurveOption = 2,
+                                                learningCurveInitCost = [550., initCost],
+                                                learningCurveInitAmount = [1e10,1e9],
+                                                learningCurveExponent = [0.15200309344504995, 0.15200309344504995]
+                                                )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('./output_10_09',caseName)
+
+
+maxIter = 10000
+caseName = 'dual_curve_test'
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290, 295, 300]
+tmax = 300
+
+initState,initParams= createGlobalVariables(tmax,1,tlist, 
+                                            learningCurveOption = 2,
+                                            learningCurveInitCost = [550., 650.],
+                                            learningCurveInitAmount = [1e10,1e9],
+                                            learningCurveExponent = [0.15200309344504995, 0.3219280948873623]
+                                            )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('./output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('./output',caseName)
+
+
+
+
+
 maxIter = 10000
 
 
@@ -25,7 +158,7 @@ for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175
     const = 550.* 1e10**0.13750352375
     amount = (initCost/const)**(-1./0.13750352375)
     print(initCost,amount)
-    initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, learningCurveInitCost = initCost, learningCurveInitAmount = amount)
+    initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurveOption = 1, learningCurveInitCost = initCost, learningCurveInitAmount = amount)
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
@@ -34,7 +167,7 @@ for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175
     write_CSV_from_pickle('./output',caseName)
 
 
-"""
+
 
 maxIter = 100000
 
