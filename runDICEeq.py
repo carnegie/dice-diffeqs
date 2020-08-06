@@ -8,19 +8,86 @@ from DICEeq import *
 from plot_utilities import *
 from io_utilities import *
 import cProfile
+   
+maxIter = 20000
 
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+
+for initCost in list(np.round(550*10.**(np.arange(-1.,1.05,0.05)))):
+#for initCost in list(np.round(550*10.**(np.arange(-1.,1.6,0.1)))):
+   
+    #initAmount = 1100.* 1e9*0.15200309344504995
+    #amount = (initCost/const)**(-1./0.15200309344504995)
+        
+    print(initCost)
+
+    caseName = 'dual_learning_compl_'+str(initCost)+'_3_1e10-1e9_20k'  # f for following
+    
+    initState,initParams= createGlobalVariables(tmax,1,tlist, 
+            learningCurveOption = 3,
+            learningCurveInitCost = [550.,initCost] ,
+            learningCurveInitAmount = [1e10,1e9],
+            learningCurveExponent = [0.15200309344504995, 0.15200309344504995],
+            utilityOption = 0,
+            firstUnitFractionalCost = [0.1,0.1]
+            )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+    
+    #%%
+maxIter = 20000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+
+#for initCost in list(np.round(550*10.**(np.arange(-1.,1.05,0.05)))):
+#for initCost in list(np.round(550*10.**(np.arange(-1.,1.6,0.1)))):
+   
+    #initAmount = 1100.* 1e9*0.15200309344504995
+    #amount = (initCost/const)**(-1./0.15200309344504995)
+        
+
+
+caseName = 'single_learning_1_1e10_20k'  # f for following
+
+initState,initParams= createGlobalVariables(tmax,1,tlist, 
+        learningCurveOption = 1,
+        learningCurveInitCost = 550. ,
+        learningCurveInitAmount = 1e10,
+        learningCurveExponent = 0.15200309344504995, 
+        utilityOption = 0,
+        firstUnitFractionalCost = 0.1
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
+
+"""    
+    
 maxIter = 20000
 
 tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
 tmax = 300
 
 #for initCost in [25,50,100,200,400,800,1600,3200,6400,12800,25600,51200,102400]:
-for initCost in list(np.round(550*2**(np.arange(-2,4.5,0.25)))):
+for initCost in list(np.round(550*2**(np.arange(-3.125,4.5,0.125)))):
     
     #initAmount = 1100.* 1e9*0.15200309344504995
     #amount = (initCost/const)**(-1./0.15200309344504995)
         
-    print(initCost, initAmount)
+    print(initCost)
 
     caseName = 'dual_learning_compl_'+str(initCost)+'_3_0.1_20k'  # f for following
     
@@ -39,7 +106,6 @@ for initCost in list(np.round(550*2**(np.arange(-2,4.5,0.25)))):
     
     write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
-"""
 maxIter = 10000
 
 tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
