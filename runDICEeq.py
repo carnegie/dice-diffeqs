@@ -9,17 +9,46 @@ from plot_utilities import *
 from io_utilities import *
 import cProfile
 
+maxIter = 20000
 
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+#for initCost in [25,50,100,200,400,800,1600,3200,6400,12800,25600,51200,102400]:
+for initCost in list(np.round(550*2**(np.arange(-2,4.5,0.25)))):
+    
+    #initAmount = 1100.* 1e9*0.15200309344504995
+    #amount = (initCost/const)**(-1./0.15200309344504995)
+        
+    print(initCost, initAmount)
+
+    caseName = 'dual_learning_compl_'+str(initCost)+'_3_0.1_20k'  # f for following
+    
+    initState,initParams= createGlobalVariables(tmax,1,tlist, 
+            learningCurveOption = 3,
+            learningCurveInitCost = [550.,initCost] ,
+            learningCurveInitAmount = [1e10,1e10],
+            learningCurveExponent = [0.15200309344504995, 0.23446525363702297],
+            utilityOption = 0,
+            firstUnitFractionalCost = [0.1,0.1]
+            )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+"""
 maxIter = 10000
 
 tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
 tmax = 300
 
 #for initCost in [25,50,100,200,400,800,1600,3200,6400,12800,25600,51200,102400]:
-for initCost in [275,550,1100,2200,4400,8800,17600,35200]:
-    initAmount = 1100. * 1e9**0.15200309344504995
+for initCost in [550,1100,2200,4400,8800,17600,35200]:
     
-    const = 1100.* 1e9*0.15200309344504995
+    initAmount = 1100.* 1e9*0.15200309344504995
     amount = (initCost/const)**(-1./0.15200309344504995)
         
     print(initCost, initAmount)
@@ -29,19 +58,76 @@ for initCost in [275,550,1100,2200,4400,8800,17600,35200]:
     initState,initParams= createGlobalVariables(tmax,1,tlist, 
                                                 learningCurveOption = 3,
                                                 learningCurveInitCost = [550.,initCost],
-                                                learningCurveInitAmount = [1e10,amount],
+                                                learningCurveInitAmount = [1e10,initAmount],
                                                 learningCurveExponent = [0.15200309344504995, 0.15200309344504995]
                                                 )
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
-    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
     
-    write_CSV_from_pickle('./output_10_09',caseName)
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
+initCost = 550
+caseName = 'single_learning_'+str(initCost)+'_1_10k'  # f for following
+
+initState,initParams= createGlobalVariables(tmax,1,tlist, 
+                                            learningCurveOption = 1,
+                                            learningCurveInitCost = 550.,
+                                            learningCurveInitAmount = 1e10,
+                                            learningCurveExponent = 0.15200309344504995,
+                                            utilityOption = 0,
+                                            firstUnitFractionalCost = 0
+                                            )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
+initCost = 550
+caseName = 'dual_learning_subs_'+str(initCost)+'_1_10k'  # f for following
+
+initState,initParams= createGlobalVariables(tmax,1,tlist, 
+            learningCurveOption = 2,
+            learningCurveInitCost = [550.,1100.],
+            learningCurveInitAmount = [1e10,1e10],
+            learningCurveExponent = [0.15200309344504995,0.23446525363702297],
+            utilityOption = 1,
+            firstUnitFractionalCost = 0.5
+            )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
+initCost = 1100
+caseName = 'dual_learning_compl_'+str(initCost)+'_1_10k'  # f for following
+
+initState,initParams= createGlobalVariables(tmax,1,tlist, 
+            learningCurveOption = 3,
+            learningCurveInitCost = [550.,initCost] ,
+            learningCurveInitAmount = [1e10,1e10],
+            learningCurveExponent = [0.15200309344504995, 0.23446525363702297],
+            utilityOption = 0,
+            firstUnitFractionalCost = [0,0]
+            )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
 
 
-
-"""
 
 maxIter = 10000
 
@@ -63,9 +149,9 @@ for initCost in [25,50,100,200,400,800,1600,3200,6400,12800,25600,51200,102400]:
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
-    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
     
-    write_CSV_from_pickle('./output_10_09',caseName)
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
     
 
 maxIter = 10000
@@ -88,9 +174,9 @@ for initCost in [550,1100,2200,4400,8800,17600,35200]:
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
-    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
     
-    write_CSV_from_pickle('./output_10_09',caseName)
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
     
 
 
@@ -114,9 +200,9 @@ for initCost in [767,769,766,768]:
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
-    pickle_results('./output_10_09',caseName,filter_dic(resAbate))
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
     
-    write_CSV_from_pickle('./output_10_09',caseName)
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 maxIter = 10000
@@ -134,9 +220,9 @@ initState,initParams= createGlobalVariables(tmax,1,tlist,
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',caseName,filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle('./output',caseName)
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 
@@ -162,9 +248,9 @@ for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
-    pickle_results('./output',caseName,filter_dic(resAbate))
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
     
-    write_CSV_from_pickle('./output',caseName)
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 
@@ -184,9 +270,9 @@ for initCost in [550,525,500,475,450,425,400,375,350,325,300,275,250,225,200,175
     
     resAbate = optDICEeq(maxIter, initState, initParams)
     
-    pickle_results('./output',caseName,filter_dic(resAbate))
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
     
-    write_CSV_from_pickle('./output',caseName)
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 maxIter = 10000
@@ -199,9 +285,9 @@ initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 cProfile.run("resAbate = optDICEeq(maxIter, initState, initParams)",filename="test01.out")
 
-pickle_results('./output',caseName,filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle('./output',caseName)
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 
@@ -216,26 +302,11 @@ initState,initParams= createGlobalVariables(tmax,1,tlist, learningCurve = True, 
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',caseName,filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle('./output',caseName)
-
-
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
-maxIter = 10000
-caseName = 'Vanilla_step10_10k'
-
-tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
-tmax = 300
-
-initState,initParams= createGlobalVariables(tmax,1,tlist)
-
-resAbate = optDICEeq(maxIter, initState, initParams)
-
-pickle_results('./output',caseName,filter_dic(resAbate))
-
-write_CSV_from_pickle('./output',caseName)
 
 
 maxIter = 10000
@@ -248,9 +319,24 @@ initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',caseName,filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle('./output',caseName)
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+maxIter = 10000
+caseName = 'Vanilla_step10_10k'
+
+tlist = [0,10,20,30,40,50,60,70,80,90,100,120,140,160,180,200,280,300]
+tmax = 300
+
+initState,initParams= createGlobalVariables(tmax,1,tlist)
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 #----------------
 
 caseName = 'Vanilla_step5_10k'
@@ -262,9 +348,9 @@ initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',caseName,filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle('./output',caseName)
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 #----------------
 
@@ -277,9 +363,9 @@ initState,initParams= createGlobalVariables(tmax,1,tlist)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',caseName,filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 
-write_CSV_from_pickle('./output',caseName)
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 
@@ -298,9 +384,9 @@ for rAbate in [1.,2.,5.,10.]:
         
         resAbate = optDICEeq(maxIter, initState, initParams)
         
-        pickle_results('./output',caseName,filter_dic(resAbate))
+        pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
         
-        write_CSV_from_pickle('./output',caseName)
+        write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
         
 # no abatement case
 initState,initParams= createGlobalVariables(tmax,1,tlist, decisionType = 2)
@@ -309,7 +395,7 @@ initState,initParams= createGlobalVariables(tmax,1,tlist, decisionType = 2)
 
 resnoAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',prefix+'noAbate',filter_dic(resnoAbate ))
+pickle_results('../dice-diffeqs_analyze/output',prefix+'noAbate',filter_dic(resnoAbate ))
 
 write_CSV_from_pickle(prefix+'noAbate')
 
@@ -327,7 +413,7 @@ initState,initParams= createGlobalVariables(tmax,1,tlist, decisionType = 2)
 
 resAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',prefix+'abate',filter_dic(resAbate))
+pickle_results('../dice-diffeqs_analyze/output',prefix+'abate',filter_dic(resAbate))
 
 write_CSV_from_pickle(prefix+'abate')
 
@@ -338,7 +424,7 @@ initParams['pback'] = 1000000 * initParams['pback']
 
 resnoAbate = optDICEeq(maxIter, initState, initParams)
 
-pickle_results('./output',prefix+'noAbate',filter_dic(resnoAbate ))
+pickle_results('../dice-diffeqs_analyze/output',prefix+'noAbate',filter_dic(resnoAbate ))
 
 write_CSV_from_pickle(prefix+'noAbate')
 
