@@ -104,8 +104,10 @@ MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
 #                  3 --> opt on savings rate
 
 # learningCurveOption == 0 --> DICE formulation (default),
-#                        1 --> single technology learning curve
-#                        2 --> two technology learning curves
+#                        1 --> single technology with learning curve
+#                        2 --> two technologies with two learning curves
+#                        3 --> two technologies but only second has a learning curve
+
 
 # if learningCurve is True, then the following keywords must be applied:
 
@@ -141,6 +143,9 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
     else:
         initParams['decisionType'] = 1
    
+   
+   
+    
    #-----> learningCurveOption
         
     if 'learningCurveOption' in kwargs.keys():
@@ -150,15 +155,15 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
         
         if initParams['learningCurveOption'] == 1:
             if 'learningCurveInitAmount' in kwargs.keys():
-                initParams['learningCurveInitAmount'] = kwargs['learningCurveInitAmount']
+                initParams['learningCurveInitAmount'] = kwargs['learningCurveInitAmount'] # should be a scalar
             else:
                 initParams['learningCurveInitAmount'] = 1e10
             if 'learningCurveInitCost' in kwargs.keys():
-                initParams['learningCurveInitCost'] = kwargs['learningCurveInitCost']
+                initParams['learningCurveInitCost'] = kwargs['learningCurveInitCost'] # should be a scalar
             else:
                 initParams['learningCurveInitCost'] = 550
             if 'learningCurveExponent' in kwargs.keys():
-                initParams['learningCurveExponent'] = kwargs['learningCurveExponent']
+                initParams['learningCurveExponent'] = kwargs['learningCurveExponent'] # should be a scalar
             else:
                 initParams['learningCurveExponent'] = 0.15200309344504995 # 10% per doubling
             initParams['learningCurveConstant'] = \
@@ -166,7 +171,7 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
         
         # --- Two abatement technologies with two learning curves
         
-        if initParams['learningCurveOption'] >= 2:
+        if initParams['learningCurveOption'] == 2:
             if 'learningCurveInitAmount' in kwargs.keys():
                 initParams['learningCurveInitAmount'] = kwargs['learningCurveInitAmount'] # should be a length 2 list
             else:
@@ -183,17 +188,40 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
                 initParams['learningCurveInitCost'][0]/initParams['learningCurveInitAmount'][0]**-initParams['learningCurveExponent'][0],
                 initParams['learningCurveInitCost'][1]/initParams['learningCurveInitAmount'][1]**-initParams['learningCurveExponent'][1]
                 ]
+        
+        # --- Two abatement technologies but only second has learning curve
+        
+        if initParams['learningCurveOption'] == 3:
+            if 'learningCurveInitAmount' in kwargs.keys():
+                initParams['learningCurveInitAmount'] = kwargs['learningCurveInitAmount'] # should be a scalar
+            else:
+                initParams['learningCurveInitAmount'] = 1e10
+            if 'learningCurveInitCost' in kwargs.keys():
+                initParams['learningCurveInitCost'] = kwargs['learningCurveInitCost'] # should be a scalar
+            else:
+                initParams['learningCurveInitCost'] = 550
+            if 'learningCurveExponent' in kwargs.keys():
+                initParams['learningCurveExponent'] = kwargs['learningCurveExponent'] # should be a scalar
+            else:
+                initParams['learningCurveExponent'] = 0.15200309344504995 # 10% per doubling
+            initParams['learningCurveConstant'] = \
+                initParams['learningCurveInitCost']/initParams['learningCurveInitAmount']**-initParams['learningCurveExponent']
     else:
         
         # --- Original DICE formulation
         
         initParams['learningCurveOption'] = 0
     
-    if initParams['learningCurveOption'] == 1:  # single tech learning curve
+    if initParams['learningCurveOption'] == 0: # single tech no learning curve
+        initState['cumAbate'] = 0.0
+    elif  initParams['learningCurveOption'] == 1:  # single tech 
         initState['cumAbate'] = initParams['learningCurveInitAmount']
-    elif  initParams['learningCurveOption'] >= 2:  #  dual tech learning curves
+    elif  initParams['learningCurveOption'] == 2: #  dual tech
         initState['cumAbate0'] = initParams['learningCurveInitAmount'][0]
         initState['cumAbate1'] = initParams['learningCurveInitAmount'][1]        
+    elif   initParams['learningCurveOption'] == 3: #  dual tech but only second has learning curve
+        initState['cumAbate0'] = 0.0
+        initState['cumAbate1'] = initParams['learningCurveInitAmount']
   
    #-----> utilityOption
  
@@ -207,12 +235,14 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
     if 'firstUnitFractionalCost' in kwargs.keys():
         initParams['firstUnitFractionalCost'] = kwargs['firstUnitFractionalCost']
     else:
-        if initParams['learningCurveOption'] < 3:
-            initParams['firstUnitFractionalCost'] = 0.  # vanilla DICE
+        if initParams['learningCurveOption'] == 2 :
+            initParams['firstUnitFractionalCost'] = [0.,0.]  # dual learning
         else:
-            initParams['firstUnitFractionalCost'] = [0.,0.]  # vanilla DICE
+            initParams['firstUnitFractionalCost'] = 0.  # vanilla DICE
            
-        
+    if 'innovationRatio' in kwargs.keys() and (initParams['learningCurveOption'] == 4 or   initParams['learningCurveOption'] == 4):
+        initParams['innovationRatio'] = kwargs['innovationRatio']
+       
    #---------------------------------------------------------------------------
    #------- Set various const--------------------------------------------------
    #---------------------------------------------------------------------------
@@ -226,7 +256,10 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
     
     #** Preferences
     initParams['elasmu'] = 1.45 # Elasticity of marginal utility of consumption     /1.45 /
-    initParams['prstp'] = 0.015 #   Initial rate of social time preference per year   /.015  /
+    if 'prstp' in kwargs.keys():
+        initParams['prstp'] = kwargs['prstp'] #   Initial rate of social time preference per year   /.015  /
+    else:
+        initParams['prstp'] = 0.015 #   Initial rate of social time preference per year   /.015  /
     initParams['rr'] = np.exp(-initParams['prstp'] * tlist)
     #** Population and technology
     gama = 0.3 #     Capital elasticity in production function    initParams['/.300    /
@@ -410,8 +443,9 @@ def DICE_fun(decisions,initState,initParams):
         params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # 30 year ramp
         params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
         
-    if params['learningCurveOption'] >= 2:
+    if params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:
         params['miuRatio'] = np.interp(tlist,params['decisionTimes'],decisions[-nTimes:])
+        # Note: logic of <miuRatio> is to say what fraction of miu is spent on first technology
     
     info = timeEvolve(state0,params)  # uses globals initState and initParams
     
@@ -484,24 +518,30 @@ def dstatedt(state,params):
     
     expcost2 = params['expcost2']
     firstUnitFractionalCost = params['firstUnitFractionalCost']   
-    #--------------------------------------------------------------------------
 
     # Adjusted cost for backstop technology 
-    if params['learningCurveOption'] == 0:
+    if params['learningCurveOption'] == 0 or params['learningCurveOption'] == 1: # nTechs == 1
+        
         # Vanilla DICE
-        pbacktime = params['pbacktime'][timeIndex]
-    elif params['learningCurveOption'] == 1:
-        # Single learning curve
         cumAbate = state['cumAbate']
-        pbacktime =  params['learningCurveConstant'] * cumAbate ** -params['learningCurveExponent']
-    elif params['learningCurveOption'] >= 2:
-        # Two learning curves 
+    else:
         cumAbate0 = state['cumAbate0']
         cumAbate1 = state['cumAbate1']
+        miuRatio = params['miuRatio'][timeIndex] # fraction of miu that goes to first technology
+        
+    if params['learningCurveOption'] == 0: # vanilla DICE
+        pbacktime = params['pbacktime'][timeIndex]
+    elif params['learningCurveOption'] == 1: # single technology with learning curve
+        # Single learning curve
+        pbacktime =  params['learningCurveConstant'] * cumAbate ** -params['learningCurveExponent']
+    elif params['learningCurveOption'] == 2:
         pbacktime0 =  params['learningCurveConstant'][0] * cumAbate0 ** -params['learningCurveExponent'][0]
         pbacktime1 =  params['learningCurveConstant'][1] * cumAbate1 ** -params['learningCurveExponent'][1]
+    elif params['learningCurveOption'] == 3:
+        # Two technologies but only one learning curve (on second technology)
+        pbacktime0 =  params['pbacktime'][timeIndex]
+        pbacktime1 =  params['learningCurveConstant'] * cumAbate1 ** -params['learningCurveExponent']
         miuRatio = params['miuRatio'][timeIndex]
-        pbacktime =  miuRatio * pbacktime0 + (1.-miuRatio ) * pbacktime1
     else:
         print ('error in learningCurveOption = ', params['learningCFUrveOption'])
     
@@ -523,11 +563,6 @@ def dstatedt(state,params):
 
 
 
-    # NOTE: <pbacktime> is $/tonCO2 cost when miu == 1.
-    #       <sigma> is carbon intensity of economy (tonCO2/$)
-        
-    #cost = pbacktime/1000 * sigma[t]/expcost2 
-    cost = pbacktime * sigma / expcost2  # Cost of backstop; note 1000 constant is lost due to units change
 
     # Abatement cost at t [This is now the total cost of abatement in each region, including resources from both regions]
     # All of the following variables are in <miu> units = fraction of emissions abated
@@ -536,35 +571,48 @@ def dstatedt(state,params):
     # <alloc> is this actor's action for the abatement of other actor's emissions
     # <alloc_other> is the other actor's action for the abatement of this actor's emissions
     
-    if params['learningCurveOption'] != 3:
+    if  params['learningCurveOption'] == 0 or  params['learningCurveOption'] == 1: # nTechs == 1:
+        # only one technology
+        # NOTE: <pbacktime> is $/tonCO2 cost when miu == 1.
+        #       <sigma> is carbon intensity of economy (tonCO2/$)
+            
+        #cost = pbacktime/1000 * sigma[t]/expcost2 
+        cost = pbacktime * sigma / expcost2  # Cost of backstop; note 1000 constant is lost due to units change
         #abatefrac = cost * miu **expcost2
         mcabate =  pbacktime *(firstUnitFractionalCost + (1.0 - firstUnitFractionalCost)* miu **(expcost2 - 1.0)  )     
         abatecost = egross * pbacktime * ( firstUnitFractionalCost * miu + (1.0 - firstUnitFractionalCost ) * miu**expcost2 / expcost2)
         
         # Marginal cost of abatement at t ($ 2005 per tCO2). Replace pbacktime with endogenous learning curve.
        
-    else: # learningCurveOption == 3
+    else: #  params['learningCurveOption'] == 2 or  params['learningCurveOption'] == 3 # nTechs == 2;  learningCurveOption == 2 or 3  two technologies
         
         miuRatio = params['miuRatio'][timeIndex]
         
         if miuRatio == 1.0:
             abatecost = egross *  pbacktime0 * ( firstUnitFractionalCost[0] * miu + (1.0 - firstUnitFractionalCost[0] ) * miu**expcost2 / expcost2) 
-            mcabate = pbacktime0 *(firstUnitFractionalCost[0] + (1.0 - firstUnitFractionalCost[0])* miu **(expcost2 - 1.0))
+            abatecost0 = abatecost
+            abatecost1 = 0
+            mcabate0 = pbacktime0 *(firstUnitFractionalCost[0] + (1.0 - firstUnitFractionalCost[0])* miu **(expcost2 - 1.0))
+            mcabate1 = pbacktime1 * firstUnitFractionalCost[1] 
                                    
         elif miuRatio == 0.0:
             abatecost = egross *  pbacktime1 * ( firstUnitFractionalCost[1] * miu + (1.0 - firstUnitFractionalCost[1] ) * miu**expcost2 / expcost2) 
-            mcabate = pbacktime0 *(firstUnitFractionalCost[1] + (1.0 - firstUnitFractionalCost[1])* miu **(expcost2 - 1.0))
+            abatecost0 = 0
+            abatecost1 = abatecost
+            mcabate0 = pbacktime1 *firstUnitFractionalCost[0]
+            mcabate1 = pbacktime1 *firstUnitFractionalCost[1] + (1.0 - firstUnitFractionalCost[1])* miu **(expcost2 - 1.0)
                                    
         else:
             miu0 = miu * miuRatio
             miu1 = miu * (1.0 - miuRatio)
+            abatecost0 = egross *  pbacktime0 * ( firstUnitFractionalCost[0] * miu0 + (1.0 - firstUnitFractionalCost[0] ) * miu0**expcost2 / expcost2) 
+            abatecost1 = egross *  pbacktime1 * ( firstUnitFractionalCost[1] * miu1 + (1.0 - firstUnitFractionalCost[1] ) * miu1**expcost2 / expcost2)
+            abatecost = abatecost0 + abatecost1
             
-            abatecost = egross *  pbacktime0 * ( firstUnitFractionalCost[0] * miu0 + (1.0 - firstUnitFractionalCost[0] ) * miu0**expcost2 / expcost2) + \
-                        egross *  pbacktime1 * ( firstUnitFractionalCost[1] * miu1 + (1.0 - firstUnitFractionalCost[1] ) * miu1**expcost2 / expcost2)
-                        
-            mcabate = max(pbacktime0 *(firstUnitFractionalCost[0] + (1.0 - firstUnitFractionalCost[0])* miu0 **(expcost2 - 1.0)) ,
-                          pbacktime1 *(firstUnitFractionalCost[1] + (1.0 - firstUnitFractionalCost[1])* miu1 **(expcost2 - 1.0)))
-       
+            mcabate0 =   pbacktime0 *(firstUnitFractionalCost[0] + (1.0 - firstUnitFractionalCost[0])* miu0 **(expcost2 - 1.0)) 
+            mcabate1 =   pbacktime1 *(firstUnitFractionalCost[1] + (1.0 - firstUnitFractionalCost[1])* miu1 **(expcost2 - 1.0))
+                
+                
     abatefrac = abatecost / ygross    # <abatecost> is total of abatement this time step 
     
     # Climate damage cost at t
@@ -633,9 +681,9 @@ def dstatedt(state,params):
     dstate['ml'] = params['b23']*( state['mu'] - state['ml']*params['mueq']/params['mleq'])
 
     #-------------------------------------------------------------------------
-    if params['learningCurveOption'] == 1:
+    if params['learningCurveOption'] == 0 or  params['learningCurveOption'] == 1:
         dstate['cumAbate'] = abateamount
-    elif params['learningCurveOption'] >= 2:
+    elif params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:
         abateamount0 = miuRatio *  abateamount 
         abateamount1 = (1.-miuRatio ) *  abateamount 
         dstate['cumAbate0'] = abateamount0
@@ -649,18 +697,23 @@ def dstatedt(state,params):
         info['etot']=etot
         info['eind']=eind
         info['abateamount']=abateamount 
-        info['pbacktime'] = pbacktime 
-        if params['learningCurveOption'] >= 2:
+        if params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:  # two technologies
             info['abateamount0'] = abateamount0
             info['abateamount1'] = abateamount1
+            info['abatecost0'] = abatecost0
+            info['abatecost1'] = abatecost1
             info['pbacktime0'] = pbacktime0
             info['pbacktime1'] = pbacktime1
+            info['mcabate0'] = mcabate0
+            info['mcabate1'] = mcabate1
             info['miuRatio'] = miuRatio
+        else:  # one technology
+            info['pbacktime'] = pbacktime             
+            info['mcabate']=mcabate
         info['abatecost']=abatecost
         info['damfrac']=damfrac
         info['damages']=damages
         info['y']=y
-        info['mcabate']=mcabate
         info['c']=c
         info['rsav']=rsav
         info['inv']=inv
@@ -668,9 +721,7 @@ def dstatedt(state,params):
         info['periodu']=periodu
         info['cemutotper']=cemutotper
         info['force'] = force
-        info['outgoingLW'] = outgoingLW
-        
-        info['pbacktime'] = pbacktime 
+        info['outgoingLW'] = outgoingLW 
         info['sigma'] = sigma 
         info['al'] = params['al'][timeIndex] 
         info['L'] = params['L'][timeIndex] 
@@ -916,7 +967,7 @@ def optDICEeq(maxeval,initState,initParams):
     initParams["saveOutput"] = True
     
     utility,info = DICE_fun(solution['x'],initState,initParams)
-    print(utility*1.e-9)
+    print(utility*1.e-12)
     root_dir = "."
 
     return [problem,option,solution,initParams,info]

@@ -9,6 +9,137 @@ from plot_utilities import *
 from io_utilities import *
 import cProfile
    
+maxIter = 10000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+
+
+
+caseName = 'test_1_0_1_0.03_10k'  # f for following
+
+initState,initParams= createGlobalVariables(tmax,1,tlist,
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded to ramp to zero between 2020 and 2050.
+        
+        decisionType = 1,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        innovationRatio = 0,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        learningCurveOption = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 550. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e10, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+        
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = 0 
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
+"""
+maxIter = 10000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+tmax = 300
+
+
+
+caseName = 'test_2_3_1_10k'  # f for following
+
+caseName = 'test_2_3_1_10k'  # f for following
+
+initState,initParams= createGlobalVariables(tmax,1,tlist,
+        
+        # decisionType == 1, estimate abatement rate and ratios only
+        #              == 2, estimate abatement rates and ratios and savings rate
+        #              == 3, estimate savings rate only
+        
+        decisionType = 2,
+        
+        # learningCurveOption == 0, vanilla DICE, single technology
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve
+        #                           hard coded to ramp to zero between 2020 and 2050.
+                                            
+        learningCurveOption = 3,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 550. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e10, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+        
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost =[0,0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+#%%
+
 maxIter = 20000
 
 tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
@@ -73,8 +204,7 @@ pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
 write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 #%%
-
-"""    
+  
     
 maxIter = 20000
 
