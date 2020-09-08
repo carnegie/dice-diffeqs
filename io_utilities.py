@@ -51,7 +51,7 @@ def write_CSV_from_pickle( output_path, file):
             f.write("%s,%s\n"%(key,info[key]))
         f.write("%s,%s\n" %('act',act))
         #f.write("%s,%s\n" %('year',year))
-            
+
 #%%
 #  filter out lambda functions etc
 

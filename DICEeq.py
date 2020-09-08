@@ -125,7 +125,7 @@ MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
 #                            x --> first using cost x times marginal unit at 100% abatement.
 #                            [x0, x1] --> marginal fraction cost for technologies 0 and 1 (when learningCurveOption == 3)
 
-def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
+def createGlobalVariables(dt,decisionTimes,**kwargs):
     # creates <initState> and <initParams>
     print('returning  variables <initState> and <initParams>')
     #print(initState)
@@ -248,7 +248,7 @@ def createGlobalVariables(timeEnd,dt,decisionTimes,**kwargs):
    #---------------------------------------------------------------------------
         
     initParams['decisionTimes'] = decisionTimes
-
+    timeEnd = max(decisionTimes)
     initParams['timeEnd'] = timeEnd
     initParams['dt'] = dt
     tlist = np.arange(0,timeEnd+dt,dt)
@@ -440,7 +440,8 @@ def DICE_fun(decisions,initState,initParams):
         params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
         params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[nTimes:2*nTimes])
     else: # decisionType = 0 (specify abatement, compute savings rate)
-        params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # 30 year ramp
+        #params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # 30 year ramp
+        params['miu'] = np.interp(tlist,[0,300],[0,0]) # no abatement
         params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
         
     if params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:
@@ -494,7 +495,7 @@ def timeEvolve(state0,params):
         dictAddEachMultiply(state, dstate, dt)
         timeIndex += 1
     return info
-    
+ 
 
 #%%
 
