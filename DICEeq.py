@@ -86,7 +86,7 @@ if (os.name != "nt"):
 else:
     sys.path.insert(0, 'C:/Users/kcaldeira/Documents/MIDACO/Windows') # Windows
 import midaco_key as midaco
-from io_utilities import pickle_results,filter_dic
+from io_utilities import pickle_results,filter_dic 
 import datetime
 
 MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
@@ -97,46 +97,27 @@ MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
 
 #%%
 
-# Note: In the following function these keyword arguments are allowed:
+# see below for list of variables
 
-#  decisionType == 1 --> opt on miu (default), 
-#                  2 --> opt on miu and savings rate, 
-#                  3 --> opt on savings rate
-
-# learningCurveOption == 0 --> DICE formulation (default),
-#                        1 --> single technology with learning curve
-#                        2 --> two technologies with two learning curves
-#                        3 --> two technologies but only second has a learning curve
-
-
-# if learningCurve is True, then the following keywords must be applied:
-
-# learningCurveInitAmount --> initial cumulative abatement, default = 1
-# learningCurveInitCost --> initial cost on leaning curve, default = $550 / tonCO2
-# learningCurveExponent --> exponent on learning curve, 20% per doubling = 0.3219280948873623
-#                                                       15% per doubling = 0.23446525363702297
-#                                                       10% per doubling = 0.15200309344504995 (default)
-#                                                        5% per doubling = 0.07400058144377693
-
-# utilityOption == 0 -->  default DICE-2016R utility function
-#                  1 -->  optimize on NPV of consumption instead of utility
-
-# firstUnitFractionalCost == 0 --> Vanilla DICE. very first unit is free !!
-#                            x --> first using cost x times marginal unit at 100% abatement.
-#                            [x0, x1] --> marginal fraction cost for technologies 0 and 1 (when learningCurveOption == 3)
-
-def createGlobalVariables(dt,decisionTimes,**kwargs):
+def initStateParams(kwargs):
     # creates <initState> and <initParams>
-    print('returning  variables <initState> and <initParams>')
     #print(initState)
+    #global initParams,initState
     initParams = {}
     initState = {}
     
    #---------------------------------------------------------------------------
    #------- Unpack keyword arguments ------------------------------------------
    #---------------------------------------------------------------------------
-   
-   #-----> decisionType 
+    
+   #-----> maximumm number of iterations 
+    
+    if 'maxeval' in kwargs.keys():
+        initParams['maxeval'] = kwargs['maxeval']
+    else:
+        initParams['maxeval'] = 1000
+ 
+    #-----> decisionType 
 
     if 'decisionType' in kwargs.keys():
         initParams['decisionType'] = kwargs['decisionType']
@@ -242,15 +223,39 @@ def createGlobalVariables(dt,decisionTimes,**kwargs):
            
     if 'innovationRatio' in kwargs.keys() and (initParams['learningCurveOption'] == 4 or   initParams['learningCurveOption'] == 4):
         initParams['innovationRatio'] = kwargs['innovationRatio']
+  
+   #----->       parallel =  # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+   # number of cores to use, 0 or 1 is single core,
+ 
+    if 'parallel' in kwargs.keys():
+        initParams['parallel'] = kwargs['parallel']
+    else:
+        initParams['parallel'] = 1  # default to 1 core
        
    #---------------------------------------------------------------------------
    #------- Set various const--------------------------------------------------
    #---------------------------------------------------------------------------
+      
+    
+   #-----> integration time step  
+    
+    if 'dt' in kwargs.keys():
+        dt = kwargs['dt']
+    else:
+        dt = 1
+    initParams['dt'] = dt     
+
+   #-----> decisionTimes 
+    
+    if 'decisionTimes' in kwargs.keys():
+        decisionTimes = kwargs['decisionTimes']
+    else:
+        decisionTimes = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
         
+           
     initParams['decisionTimes'] = decisionTimes
-    timeEnd = max(decisionTimes)
+    timeEnd = max(initParams['decisionTimes'] )
     initParams['timeEnd'] = timeEnd
-    initParams['dt'] = dt
     tlist = np.arange(0,timeEnd+dt,dt)
     initParams['tlist'] = tlist
     
@@ -829,10 +834,82 @@ utils.csvWriteScalar('test10s.csv',pa)
 ########################################################################
 #########################   MAIN PROGRAM   #############################
 ########################################################################
+"""
+result = runDICEeq(
+
+    # dt time step for integration
+    dt = 1,
+    
+    # tlist list of decision times (last decision time is end time of integration)
+    
+    decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300],
+    
+    
+    # decisionType == 1, use prescribed savings rate
+    #              == 2, optimize on savings rate in addition to other parameters
+    #              == 3, estimate savings rate only
+    #                          miu hard coded for no abatement.
+    
+    #decisionType = 3,
+    decisionType = 2,
+    
+    # learningCurveOption == 0, single technology, vanilla DICE
+    #                     == 1, single technology, with learning curve
+    #                     == 2, dual technology, dual learning curves
+    #                     == 3, dual technology, only second has learning curve 
+    #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+    #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+    
+    learningCurveOption = 3,
+    
+    # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                        
+    innovationRatio = 0,
+    
+    # learningCurveInitCost == initial cost for learning curve.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveInitCost = 5500. ,
+    
+    # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveInitAmount  = 1e4, 
+    
+    # learningCurveExponent == slope of learning curve on log-log plot,
+    #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveExponent = 0.15200309344504995, 
+           
+    # utilityOption == 0 --> DICE utility function
+    #               == 1 --> assume consumption == utility
+    
+    utilityOption = 1,
+    
+    # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+    
+    prstp = 0.03,
+    
+    # firstUnitFractionCost == cost of first unit
+    
+    firstUnitFractionalCost = [0.1, 0.1],
+    
+    # number of cores to use, 0 or 1 is single core,
+    # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+    
+    parallel = 1,
+    
+    # maxeval maximum number of iterations for solver
+    
+    maxeval = 1000
+    )
+
+"""
   
-def optDICEeq(maxeval,initState,initParams):
-    #relies on globals <initState>, <params>
-    #global initState,initParams
+def runDICEeq(**kwargs):
+    global initState,initParams
+    initState,initParams= initStateParams(kwargs)
     
     decisionTimes = initParams['decisionTimes']
     nDecisionTimes = len(initParams['decisionTimes'])
@@ -909,7 +986,7 @@ def optDICEeq(maxeval,initState,initParams):
     # STEP 2.A: Stopping criteria 
     #############################
     #option['maxeval'] = 100000   # Maximum number of function evaluation (e.g. 1000000) 
-    option['maxeval'] = maxeval   # Maximum number of function evaluation (e.g. 1000000) 
+    option['maxeval'] = initParams['maxeval']   # Maximum number of function evaluation (e.g. 1000000) 
     #option['maxeval'] = 1    # Maximum number of function evaluation TEST
     option['maxtime'] = 60*60*24 # Maximum time limit in seconds (e.g. 1 Day = 60*60*24) 
     
@@ -940,13 +1017,15 @@ def optDICEeq(maxeval,initState,initParams):
     ### Step 4: Choose Parallelization Factor   ############################
     ########################################################################
     
-    option['parallel'] = 1 # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+    #option['parallel'] = 1 # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+    option['parallel'] = initParams['parallel'] # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
     
     ########################################################################
     ############################ Run MIDACO ################################
     ########################################################################
    
     startdate = datetime.datetime.now()
+    print(startdate.strftime("%d/%m/%Y %H:%M:%S"))
     
     initParams["saveOutput"] = False
     
@@ -959,6 +1038,7 @@ def optDICEeq(maxeval,initState,initParams):
     print(solution['x'])
     
     enddate = datetime.datetime.now()
+    print(enddate.strftime("%d/%m/%Y %H:%M:%S"))
     minutes_diff = (enddate - startdate).total_seconds() / 60.0
     print ('elapsed time = ',str(minutes_diff),' minutes')
     
@@ -979,5 +1059,5 @@ def optDICEeq(maxeval,initState,initParams):
 ########################################################################
 ########################################################################
     
-#iState,iParams = createGlobalVariables(300,1,[0,2.5,5,10,20,40,80,120,160,200,240,280,290,295,297.5]); res = optDICEeq(iState, iParams)
+#iState,iParams = initStateParams(300,1,[0,2.5,5,10,20,40,80,120,160,200,240,280,290,295,297.5]); res = optDICEeq(iState, iParams)
 #from plot_utilities import *

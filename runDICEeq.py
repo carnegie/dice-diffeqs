@@ -9,6 +9,1080 @@ from plot_utilities import *
 from io_utilities import *
 import cProfile
 
+
+#%%
+
+
+
+
+# More regular kind of test case (takes about 3 min to run on my machine )
+
+caseName = 'test_20k'
+
+result = runDICEeq(
+
+    # dt time step for integration
+    dt = 1,
+    
+    # tlist list of decision times (last decision time is end time of integration)
+    
+    decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300],
+    
+    
+    # decisionType == 1, use prescribed savings rate
+    #              == 2, optimize on savings rate in addition to other parameters
+    #              == 3, estimate savings rate only
+    #                          miu hard coded for no abatement.
+    
+    #decisionType = 3,
+    decisionType = 2,
+    
+    # learningCurveOption == 0, single technology, vanilla DICE
+    #                     == 1, single technology, with learning curve
+    #                     == 2, dual technology, dual learning curves
+    #                     == 3, dual technology, only second has learning curve 
+    #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+    #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+    
+    learningCurveOption = 3,
+    
+    # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                        
+    innovationRatio = 0,
+    
+    # learningCurveInitCost == initial cost for learning curve.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveInitCost = 5500. ,
+    
+    # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveInitAmount  = 1e4, 
+    
+    # learningCurveExponent == slope of learning curve on log-log plot,
+    #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveExponent = 0.15200309344504995, 
+           
+    # utilityOption == 0 --> DICE utility function
+    #               == 1 --> assume consumption == utility
+    
+    utilityOption = 1,
+    
+    # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+    
+    prstp = 0.03,
+    
+    # firstUnitFractionCost == cost of first unit
+    
+    firstUnitFractionalCost = [0.1, 0.1],
+    
+    # number of cores to use, 0 or 1 is single core,
+    # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+    
+    parallel = 1,
+    
+    # maxeval maximum number of iterations for solver
+    
+    maxeval = 1000
+    )
+
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(result))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#%%
+
+"""
+
+#TEST EXAMPLE. THE NEXT LINE SHOULD RUN PROPERLY AND PRODUCE OUTPUT LIKE THE FOLLOWING
+
+res2 = runDICEeq()
+
+
+        10/09/2020 17:59:39
+        [0.11782187651078362, 0.11847914215584855, 0.13538843014627477, 0.1546948554357284, 0.17522880655301645, 0.2006530657664092, 0.21299159464892045, 0.21969442781205817, 0.28028569815473725, 0.2504005642594187, 0.32603836643362694, 0.3330327910967299, 0.36916401639180496, 0.4172079475947874, 0.43691469409735884, 0.4662520216829885, 0.5369353318154555, 0.5401704157815219, 0.5671256891479827, 0.6238056046187326, 0.6977797502307891, 0.7236226547046273, 1.0568964770874654, 1.197045549757535, 1.19995093881849, 1.1929180591265525, 0.6267507576856426, 0.7668773743742695]
+        10/09/2020 17:59:47
+        elapsed time =  0.13555313333333335  minutes
+        0.48611825629538824
+
+
+
+
+#%%
+
+# Vanilla DICE-2016R simulation  THESE ARE THE DEFAULT PARAMETER VALUES
+
+caseName = 'DICEtest_10k'
+
+result = runDICEeq(
+
+    # dt time step for integration
+    dt = 1,
+    
+    # tlist list of decision times (last decision time is end time of integration)
+    
+    decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300],
+    
+    
+    # decisionType == 1, use prescribed savings rate
+    #              == 2, optimize on savings rate in addition to other parameters
+    #              == 3, estimate savings rate only
+    #                          miu hard coded for no abatement.
+    
+    #decisionType = 3,
+    decisionType = 1,
+    
+    # learningCurveOption == 0, single technology, vanilla DICE
+    #                     == 1, single technology, with learning curve
+    #                     == 2, dual technology, dual learning curves
+    #                     == 3, dual technology, only second has learning curve 
+    #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+    #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+    
+    learningCurveOption = 0,
+    
+    # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                        
+    innovationRatio = 0,
+    
+    # learningCurveInitCost == initial cost for learning curve.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveInitCost = 5500. ,
+    
+    # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveInitAmount  = 1e4, 
+    
+    # learningCurveExponent == slope of learning curve on log-log plot,
+    #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+    # (scalar unless learningCurveOption = 2, in which case 2 element list)
+    
+    learningCurveExponent = 0.15200309344504995, 
+           
+    # utilityOption == 0 --> DICE utility function
+    #               == 1 --> assume consumption == utility
+    
+    utilityOption = 0,
+    
+    # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+    
+    prstp = 0.015,
+    
+    # firstUnitFractionCost == cost of first unit
+    
+    firstUnitFractionalCost = 0,
+    
+    # number of cores to use, 0 or 1 is single core,
+    # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+    
+    parallel = 1,
+    
+    # maxeval maximum number of iterations for solver
+    
+    maxeval = 1000
+    )
+
+
+# OUTPUT OF TEST RUN with maxeval = 1000
+
+        10/09/2020 18:02:23
+        [0.11782187651078362, 0.11847914215584855, 0.13538843014627477, 0.1546948554357284, 0.17522880655301645, 0.2006530657664092, 0.21299159464892045, 0.21969442781205817, 0.28028569815473725, 0.2504005642594187, 0.32603836643362694, 0.3330327910967299, 0.36916401639180496, 0.4172079475947874, 0.43691469409735884, 0.4662520216829885, 0.5369353318154555, 0.5401704157815219, 0.5671256891479827, 0.6238056046187326, 0.6977797502307891, 0.7236226547046273, 1.0568964770874654, 1.197045549757535, 1.19995093881849, 1.1929180591265525, 0.6267507576856426, 0.7668773743742695]
+        10/09/2020 18:02:31
+        elapsed time =  0.14119486666666664  minutes
+        0.48611825629538824
+
+# TEST RUN WITH maxeval = 10,000 instead of 1000
+        
+res2 = runDICEeq(maxeval = 10000)
+
+        10/09/2020 18:07:46
+        [0.11588568882948175, 0.12799732039436923, 0.14210742312962285, 0.1579449759522625, 0.1754216406375176, 0.19445960647246685, 0.21502320477485518, 0.23709857721630762, 0.26068996341459005, 0.2858135775611535, 0.3124940867380768, 0.34076226587417796, 0.37065036513027555, 0.4021987805754812, 0.4354327509095898, 0.4704131313840456, 0.5071404715012597, 0.5456876127445954, 0.5861207986990827, 0.6283278547644422, 0.6731181395180476, 0.7643533839078004, 0.9822891203379444, 1.2, 1.2, 1.2, 0.6744423671565069, 0.0]
+        10/09/2020 18:09:07
+        elapsed time =  1.35658935  minutes
+        0.48611903642090903  
+
+# TEST RUN WITH maxeval = 20,000 instead of 1000
+
+res2 = runDICEeq(maxeval = 20000)
+
+        10/09/2020 18:04:01
+        [0.11588530588955423, 0.12799644726180467, 0.14210664856788185, 0.157944564283299, 0.17542148580230665, 0.19445956460096497, 0.21502312494653752, 0.23709870548803644, 0.2606900092175558, 0.28581355263478253, 0.3124941063240477, 0.3407621848937199, 0.37065087083058135, 0.4021972994912176, 0.43543639583813915, 0.4704068205953609, 0.507146022358954, 0.5456872496780522, 0.586119168732383, 0.6283264006536459, 0.6731154076575664, 0.7643588141981891, 0.9822846456442204, 1.2, 1.2, 1.2, 0.6744422990347867, 0.0]
+        10/09/2020 18:06:46
+        elapsed time =  2.7607190666666668  minutes
+        0.48611903642091703
+        
+      
+
+
+
+
+#%%
+
+NOTE THE STUFF BELOW HERE IS OLD ARE EXAMPLES OF SOME INTERESTING PARAMTER VALUES
+
+maxIter = 20000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+
+qlist = [1e100, 7.09787e10, 7.4252e8, 5.15509e7, 7.76762e6, 1.78951e6, 539282., 195608., 81258.3, 37440.8, 18720.4, 10000.]
+alist = [6.30508e-16,500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500]
+aStringlist = ["0000","0500",    "1000",    "1500",   "2000",    "2500",    "3000",   "3500",  "4000", "4500",  "5000",  "5500"]
+
+for qval,aval,aString in zip(qlist,alist,aStringlist):
+
+    #caseName = 'test_1_0_0_0.015_10k'  # f for following
+    caseName = 'initcost_2_3_' + aString + 'q_1_0.03_0.1_20k' 
+    
+    initState,initParams= createGlobalVariables(1,tlist,
+            # dt, and decisionTimes (last time step is last decision time)
+            
+            # decisionType == 1, use prescribed savings rate
+            #              == 2, optimize on savings rate in addition to other parameters
+            #              == 3, estimate savings rate only
+            #                          miu hard coded for no abatement.
+            
+            #decisionType = 3,
+            decisionType = 2,
+            
+            # learningCurveOption == 0, single technology, vanilla DICE
+            #                     == 1, single technology, with learning curve
+            #                     == 2, dual technology, dual learning curves
+            #                     == 3, dual technology, only second has learning curve 
+            #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+            #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+            
+            learningCurveOption = 3,
+            
+            # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                                
+            innovationRatio = 0,
+            
+            # learningCurveInitCost == initial cost for learning curve.
+            # (scalar unless learningCurveOption = 2, in which case 2 element list)
+            
+            learningCurveInitCost = aval ,
+            
+            # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+            # (scalar unless learningCurveOption = 2, in which case 2 element list)
+            
+            learningCurveInitAmount  = qval, 
+            
+            # learningCurveExponent == slope of learning curve on log-log plot,
+            #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+            # (scalar unless learningCurveOption = 2, in which case 2 element list)
+            
+            learningCurveExponent = 0.15200309344504995, 
+                   
+            # utilityOption == 0 --> DICE utility function
+            #               == 1 --> assume consumption == utility
+            
+            utilityOption = 1,
+            
+            # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+            
+            prstp = 0.03,
+            
+            # firstUnitFractionCost == cost of first unit
+            
+            firstUnitFractionalCost = [0.1, 0.1]
+            )
+    
+    resAbate = optDICEeq(maxIter, initState, initParams)
+    
+    pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+    
+    write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+
+#%%
+
+
+
+maxIter = 20000
+
+tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_5500_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 5500. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_5000_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 5000. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_4500_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 4500. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_4000_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 4000. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_3500_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 3500. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_3000_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 3000. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_2500_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 2500. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_2000_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 2000. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_1500_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 1500. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_1000_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 1000. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_0500_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 500. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+#caseName = 'test_1_0_0_0.015_10k'  # f for following
+caseName = 'initcost_2_3_0000_1_0.03_0.1_20k' 
+
+initState,initParams= createGlobalVariables(1,tlist,
+        # dt, and decisionTimes (last time step is last decision time)
+        
+        # decisionType == 1, use prescribed savings rate
+        #              == 2, optimize on savings rate in addition to other parameters
+        #              == 3, estimate savings rate only
+        #                          miu hard coded for no abatement.
+        
+        #decisionType = 3,
+        decisionType = 2,
+        
+        # learningCurveOption == 0, single technology, vanilla DICE
+        #                     == 1, single technology, with learning curve
+        #                     == 2, dual technology, dual learning curves
+        #                     == 3, dual technology, only second has learning curve 
+        #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
+        #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+        
+        learningCurveOption = 3,
+        
+        # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+                                            
+        innovationRatio = 0,
+        
+        # learningCurveInitCost == initial cost for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitCost = 0. ,
+        
+        # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveInitAmount  = 1e4, 
+        
+        # learningCurveExponent == slope of learning curve on log-log plot,
+        #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+        # (scalar unless learningCurveOption = 2, in which case 2 element list)
+        
+        learningCurveExponent = 0.15200309344504995, 
+               
+        # utilityOption == 0 --> DICE utility function
+        #               == 1 --> assume consumption == utility
+        
+        utilityOption = 1,
+        
+        # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+        
+        prstp = 0.03,
+        
+        # firstUnitFractionCost == cost of first unit
+        
+        firstUnitFractionalCost = [0.1, 0.1]
+        )
+
+resAbate = optDICEeq(maxIter, initState, initParams)
+
+pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resAbate))
+
+write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
+
+
+
+
+#%%
+
+
 maxIter = 1000000
 
 tlist = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
@@ -146,7 +1220,6 @@ write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 #%%
-"""
 
 maxIter = 30000
 
