@@ -4,8 +4,6 @@
 
 Created on Sun Jul 12 14:53:40 2020
 
-
-
 @author: kcaldeira
 
 """
@@ -16,65 +14,97 @@ from io_utilities import *
 
 import cProfile
 
-
-
-
-
-
-
 from DICE_diffeqs import DICE_instance
-
-
-
-
-
-
 
 #%%
 
-
-
 if __name__ == "__main__":
 
-        caseName = 'test_Lei-main-Class'
+        caseName = 'test_case'
+
+        # If no arg is given, run vanilla DICE
 
         result40 = DICE_instance(dt = 1,
 
-                           decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300],
+                                 # dt time step for integration
+        
+                                 decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,110,130,150,200,280,290,300],
 
-                           decisionType = 1,
+                                 decisionType = 1,
 
-                           learningCurveOption = 1,
+                                 # decisionType == 1, use prescribed savings rate
 
-                           innovationRatio = 0,
+                                 #               == 2, optimize on savings rate in addition to other parameters
 
-                           learningCurveInitCost = 5500.,
+                                 #               == 3, estimate savings rate only, miu hard coded for no abatement.
 
-                           learningCurveInitAmount  = 1e4,
+                                 learningCurveOption = 1,
 
-                           learningCurveExponent = 0.15200309344504995,
+                                 # learningCurveOption == 0, single technology, vanilla DICE
 
-                           utilityOption = 1,
+                                 #                     == 1, single technology, with learning curve
 
-                           prstp = 0.03,
+                                 #                     == 2, dual technology, dual learning curves
 
-                           firstUnitFractionalCost = 0.1,
+                                 #                     == 3, dual technology, only second has learning curve 
 
-                           parallel = 15,
+                                 #                     == 4, dual technology, only second has learning curve, potential for curve shifting investment 
 
-                           maxeval = 1000
+                                 #                     == 5, dual technology, only second has learning curve, potential for curve following investment 
+
+                                 innovationRatio = 0,
+
+                                 # fractional cost reduction per $ invested in innovation, i.e., 1e-12 means a 0.1% cost reduction per billion dollars invested.
+
+                                 learningCurveInitCost = 5500.,
+
+                                 # learningCurveInitCost == initial cost for learning curve.
+                                 
+                                 # (scalar unless learningCurveOption = 2, in which case 2 element list)
+
+                                 learningCurveInitAmount  = 1e4,
+
+                                 # learningCurveInitAmount == cumulative amount at time zero for learning curve.
+
+                                 # (scalar unless learningCurveOption = 2, in which case 2 element list)
+
+                                 earningCurveExponent = 0.15200309344504995,
+
+                                 # learningCurveExponent == slope of learning curve on log-log plot,
+
+                                 #                       == exponent on powerlaw cost = cost0* cumAmount^exponent.
+
+                                 # (scalar unless learningCurveOption = 2, in which case 2 element list)
+
+                                 utilityOption = 1,
+
+                                 # utilityOption == 0 --> DICE utility function
+
+                                 #               == 1 --> assume consumption == utility
+
+                                 prstp = 0.03,
+
+                                 # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
+                                 
+                                 firstUnitFractionalCost = 0.1, 
+
+                                 # firstUnitFractionCost == cost of first unit
+
+                                 parallel = 15,
+
+                                 # number of cores to use, 0 or 1 is single core,
+
+                                 # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+
+                                 maxeval = 1000
+
+                                 # maxeval maximum number of iterations for solver
 
                            )
+        
+        pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(result40))
 
-
-
-        print ('done here')
-
-
-
-
-
-
+        write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
 
 
