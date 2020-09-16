@@ -888,7 +888,7 @@ class DICE_instance:
     
         if os.getlogin()=='kcaldeira':
             MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
-        elif s.getlogin()=='CandiseHenry':
+        elif os.getlogin()=='CandiseHenry':
             MIDACO_KEY = b'Candise_Henry(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
         else:
             MIDACO_KEY = b'Lei_Duan_____(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
