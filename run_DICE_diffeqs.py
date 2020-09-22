@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
                                  # (scalar unless learningCurveOption = 2, in which case 2 element list)
 
-                                 earningCurveExponent = 0.15200309344504995,
+                                 learningCurveExponent = 0.15200309344504995,
 
                                  # learningCurveExponent == slope of learning curve on log-log plot,
 
