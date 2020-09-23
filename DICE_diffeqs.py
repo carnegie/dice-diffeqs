@@ -503,7 +503,7 @@ def dstatedt(state,params):
         # Two technologies but only one learning curve (on second technology)
         pbacktime0 =  params['pbacktime'][timeIndex]
         pbacktime1 =  params['learningCurveConstant'] * cumAbate1 ** -params['learningCurveExponent']
-        miuRatio = params['miuRatio'][timeIndex]
+        # miuRatio = params['miuRatio'][timeIndex]
     else:
         print ('error in learningCurveOption = ', params['learningCFUrveOption'])
     
@@ -538,8 +538,12 @@ def dstatedt(state,params):
         #cost = pbacktime/1000 * sigma[t]/expcost2 
         cost = pbacktime * sigma / expcost2  # Cost of backstop; note 1000 constant is lost due to units change
         #abatefrac = cost * miu **expcost2
-        mcabate =  pbacktime *(firstUnitFractionalCost + (1.0 - firstUnitFractionalCost)* miu **(expcost2 - 1.0)  )     
-        abatecost = egross * pbacktime * ( firstUnitFractionalCost * miu + (1.0 - firstUnitFractionalCost ) * miu**expcost2 / expcost2)
+        mcabate   =          pbacktime * ( firstUnitFractionalCost       + (1.0 - firstUnitFractionalCost ) * miu **(expcost2 - 1.0)    )     
+        abatecost = egross * pbacktime * ( firstUnitFractionalCost * miu + (1.0 - firstUnitFractionalCost ) * miu ** expcost2 / expcost2)
+
+        # For self understanding:
+        # abatecost = ygross * sigma * miu / expcost2 * pbacktime * (firstUnitFractionalCost + (1-firstUnitFractionalCost)*miu **(expcost2 - 1.0))
+        # mcabate   =                                   pbacktime * (firstUnitFractionalCost + (1-firstUnitFractionalCost)*miu **(expcost2 - 1.0))
         
         # Marginal cost of abatement at t ($ 2005 per tCO2). Replace pbacktime with endogenous learning curve.
        
@@ -749,7 +753,7 @@ class DICE_instance:
 
         self.initState = initState
         self.initParams = initParams
-        self.runDICEeq() 
+        self.out = self.runDICEeq() 
     
     def wrapper(self, act):
 

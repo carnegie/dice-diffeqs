@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
                            )
         
-        pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(result40))
+        pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(result40.out))
 
         write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
