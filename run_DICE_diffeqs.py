@@ -37,35 +37,35 @@ from DICE_diffeqs import DICE_instance
 if __name__ == "__main__":
 
         caseName = 'test_Lei-main-Class'
-
+        
         result40 = DICE_instance(dt = 1,
-
+        
                            decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300],
-
+        
                            decisionType = 1,
-
+        
                            learningCurveOption = 1,
-
+        
                            innovationRatio = 0,
-
+                           
                            learningCurveInitCost = 5500.,
-
+        
                            learningCurveInitAmount  = 1e4,
-
+        
                            learningCurveExponent = 0.15200309344504995,
-
+        
                            utilityOption = 1,
-
+        
                            prstp = 0.03,
-
+        
                            firstUnitFractionalCost = 0.1,
-
-                           parallel = 15,
-
+        
+                           parallel = 1,
+        
                            maxeval = 1000
-
+        
                            )
-
+        
 
 
         print ('done here')

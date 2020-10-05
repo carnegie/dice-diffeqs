@@ -265,7 +265,7 @@ def initStateParams(kwargs):
         initParams['prstp'] = kwargs['prstp'] #   Initial rate of social time preference per year   /.015  /
     else:
         initParams['prstp'] = 0.015 #   Initial rate of social time preference per year   /.015  /
-    initParams['rr'] = np.exp(-initParams['prstp'] * tlist)
+    initParams['rr'] = (1./(1.+initParams['prstp']))** tlist
     #** Population and technology
     gama = 0.3 #     Capital elasticity in production function    initParams['/.300    /
     initParams['gama'] = gama
@@ -478,7 +478,6 @@ def dstatedt(state,params):
     info = {}
     epsilon = 1.e-20 # small number (almost zero)
     
-    t = params['t']
     timeIndex = params['timeIndex']
     
     miu = params['miu'][timeIndex]
