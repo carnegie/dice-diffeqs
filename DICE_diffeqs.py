@@ -89,8 +89,6 @@ import midaco_key as midaco
 from io_utilities import pickle_results,filter_dic 
 import datetime
 
-MIDACO_KEY = b'Lei_Duan_____(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
-
 ########################################################################
 ################### FUNCTIONS & OPTIMIZATION PROBLEM ###################
 ########################################################################
@@ -101,8 +99,6 @@ MIDACO_KEY = b'Lei_Duan_____(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
 
 def initStateParams(kwargs):
     # creates <initState> and <initParams>
-    #print(initState)
-    #global initParams,initState
     initParams = {}
     initState = {}
     
@@ -123,8 +119,6 @@ def initStateParams(kwargs):
         initParams['decisionType'] = kwargs['decisionType']
     else:
         initParams['decisionType'] = 1
-   
-   
    
     
    #-----> learningCurveOption
@@ -508,7 +502,7 @@ def dstatedt(state,params):
         # Two technologies but only one learning curve (on second technology)
         pbacktime0 =  params['pbacktime'][timeIndex]
         pbacktime1 =  params['learningCurveConstant'] * cumAbate1 ** -params['learningCurveExponent']
-        miuRatio = params['miuRatio'][timeIndex]
+        # miuRatio = params['miuRatio'][timeIndex]
     else:
         print ('error in learningCurveOption = ', params['learningCFUrveOption'])
     
@@ -528,9 +522,6 @@ def dstatedt(state,params):
     # Total CO2 emission at t (tCO2)
     etot = eind + params['etree'][timeIndex] 
 
-
-
-
     # Abatement cost at t [This is now the total cost of abatement in each region, including resources from both regions]
     # All of the following variables are in <miu> units = fraction of emissions abated
     # <act> is this actor's action for its own abatement
@@ -546,8 +537,12 @@ def dstatedt(state,params):
         #cost = pbacktime/1000 * sigma[t]/expcost2 
         cost = pbacktime * sigma / expcost2  # Cost of backstop; note 1000 constant is lost due to units change
         #abatefrac = cost * miu **expcost2
-        mcabate =  pbacktime *(firstUnitFractionalCost + (1.0 - firstUnitFractionalCost)* miu **(expcost2 - 1.0)  )     
-        abatecost = egross * pbacktime * ( firstUnitFractionalCost * miu + (1.0 - firstUnitFractionalCost ) * miu**expcost2 / expcost2)
+        mcabate   =          pbacktime * ( firstUnitFractionalCost       + (1.0 - firstUnitFractionalCost ) * miu **(expcost2 - 1.0)    )     
+        abatecost = egross * pbacktime * ( firstUnitFractionalCost * miu + (1.0 - firstUnitFractionalCost ) * miu ** expcost2 / expcost2)
+
+        # For self understanding:
+        # abatecost = ygross * sigma * miu / expcost2 * pbacktime * (firstUnitFractionalCost + (1-firstUnitFractionalCost)*miu **(expcost2 - 1.0))
+        # mcabate   =                                   pbacktime * (firstUnitFractionalCost + (1-firstUnitFractionalCost)*miu **(expcost2 - 1.0))
         
         # Marginal cost of abatement at t ($ 2005 per tCO2). Replace pbacktime with endogenous learning curve.
        
@@ -744,29 +739,37 @@ def interpStep(t, timePoints, dataPoints):
 
 
 
-
-
+#############################################################################
+#####    Main DICE Function                              ####################
+#####    Class is used to transfer data among functions  ####################
+#############################################################################
 
 class DICE_instance:
+
     def __init__(self, **kwargs):
+
         initState, initParams = initStateParams(kwargs)
+
         self.initState = initState
         self.initParams = initParams
-        #############################################################################
-        ##### Run the main function here                         ####################
-        #############################################################################
-        self.runDICEeq() 
+        self.out = self.runDICEeq() 
     
     def wrapper(self, act):
+
         initState = self.initState
         initParams = self.initParams
+
         welfare, discard = DICE_fun(act,initState,initParams)
+
         dummy = 0.0
+
         # "Without loss of generality, all objectives are subject to minimization."
         # http://www.midaco-solver.com/data/other/MIDACO_User_Manual.pdf
+
         return [[-welfare],[dummy]]
 
     def runDICEeq(self):
+
         initState = self.initState
         initParams = self.initParams
         
@@ -777,7 +780,7 @@ class DICE_instance:
     
         nDecisions = nDecisionTimes
         if decisionType == 2: # optimize for both abatement and savings rate
-            nDecisions +=   nDecisionTimes # add decisions for savings rate
+            nDecisions += nDecisionTimes # add decisions for savings rate
         if learningCurveOption == 2:
             nDecisions += nDecisionTimes # add decisions for miuRatio
 
@@ -797,7 +800,6 @@ class DICE_instance:
         problem['ni'] = 0                       # Number of integer variables (0 <= ni <= n) 
         problem['m']  = 0                       # Number of constraints (in total) 
         problem['me'] = 0                       # Number of equality constraints (0 <= me <= m)
-    
     
         # STEP 1.B: Lower and upper bounds 'xl' & 'xu'
         #############################################
@@ -821,7 +823,6 @@ class DICE_instance:
     
         problem['x'] = act0  # initial guess for control variable
         nDecisions = len(act0)
-    
 
         actlower = [0.0 for i in act0]
 
@@ -890,9 +891,10 @@ class DICE_instance:
     
         if os.getlogin()=='kcaldeira':
             MIDACO_KEY = b'Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
-        else:
+        elif os.getlogin()=='CandiseHenry':
             MIDACO_KEY = b'Candise_Henry(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
-        # MIDACO_KEY = b'Lei_Duan_____(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
+        else:
+            MIDACO_KEY = b'Lei_Duan_____(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]'
         
         solution = midaco.run( problem, option, MIDACO_KEY )
         print(solution['x'])
