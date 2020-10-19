@@ -421,8 +421,8 @@ def DICE_fun(decisions,initState,initParams):
         params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
         params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[nTimes:2*nTimes])
     else: # decisionType = 0 (specify abatement, compute savings rate)
-        #params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # 30 year ramp
-        params['miu'] = np.interp(tlist,[0,300],[0,0]) # no abatement
+        params['miu'] = np.interp(tlist,[0,300],[0,0,]) # 30 year ramp
+        #params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # no abatement
         params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
         
     if params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:
@@ -852,7 +852,7 @@ class DICE_instance:
     
         # STEP 2.B: Printing options  
         ############################ 
-        option['printeval'] = 10   # Print-Frequency for current best solution (e.g. 1000) 
+        option['printeval'] = 1000   # Print-Frequency for current best solution (e.g. 1000) 
         option['save2file'] = 1     # Save SCREEN and SOLUTION to TXT-files [0=NO/1=YES]
 
         ########################################################################
