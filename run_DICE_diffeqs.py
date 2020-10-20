@@ -19,7 +19,7 @@ from DICE_diffeqs import DICE_instance
 
 #%%
 
-
+# starting point has learning curve of 10 k$ at 10,000 tCO2, and a learning rate of 12% per doubling.
 
 if __name__ == "__main__":
 
@@ -62,15 +62,15 @@ if __name__ == "__main__":
                 
                 # (scalar unless learningCurveOption = 2, in which case 2 element list)
 
-                learningCurveInitAmount  = 1e5,
+                learningCurveInitAmount  = 1e4,
 
                 # learningCurveInitAmount == cumulative amount at time zero for learning curve.
 
                 # (scalar unless learningCurveOption = 2, in which case 2 element list)
 
                 # learningCurveExponent = 0.15200309344504995, # 10% per doubling
-                # learningCurveExponent = 0.18442457113742744, # 12% per doubling
-                learningCurveExponent = 0.23446525363702297,  # 15% per doubling
+                learningCurveExponent = 0.18442457113742744, # 12% per doubling
+                # learningCurveExponent = 0.23446525363702297,  # 15% per doubling
 
                 # learningCurveExponent == slope of learning curve on log-log plot,
 
@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
                 # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
                 
-                firstUnitFractionalCost = [0.1, 0.1], 
+                firstUnitFractionalCost = [0.0, 0.1], 
 
                 # firstUnitFractionCost == cost of first unit
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
                 # Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
 
-                maxeval = 80000
+                maxeval = 20000
 
                 # maxeval maximum number of iterations for solver
 
