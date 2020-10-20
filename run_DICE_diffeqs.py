@@ -23,7 +23,7 @@ from DICE_diffeqs import DICE_instance
 
 if __name__ == "__main__":
 
-        caseName = 'testCentral'
+        caseName = 'test_0_0_20k'
 
         # If no arg is given, run vanilla DICE
 
