@@ -48,8 +48,10 @@ def write_CSV_from_pickle( output_path, file):
 
     with open(output_path + '/' + file + '.csv', 'w') as f:
         for key in info.keys():
-            f.write("%s,%s\n"%(key,info[key]))
-        f.write("%s,%s\n" %('act',act))
+            f.write("%s,%s\n"%(key,str(info[key])[1:-1]))
+            # f.write("%s,%s\n"%(key,info[key]))
+        f.write("%s,%s\n" %('act',str(act)[1:-1]))
+        # f.write("%s,%s\n" %('act',act))
         #f.write("%s,%s\n" %('year',year))
 
 #%%
