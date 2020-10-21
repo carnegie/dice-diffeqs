@@ -852,7 +852,7 @@ class DICE_instance:
     
         # STEP 2.B: Printing options  
         ############################ 
-        option['printeval'] = 1000   # Print-Frequency for current best solution (e.g. 1000) 
+        option['printeval'] = 10000   # Print-Frequency for current best solution (e.g. 1000) 
         option['save2file'] = 1     # Save SCREEN and SOLUTION to TXT-files [0=NO/1=YES]
 
         ########################################################################
@@ -865,8 +865,8 @@ class DICE_instance:
         option['param4']  = 100     # ALGOSTOP (integer) 
         option['param5']  = 0.0     # EVALSTOP  
         option['param6']  = 0.0     # FOCUS  
-        option['param7']  = 100     # ANTS  
-        option['param8']  = 10      # KERNEL  
+        option['param7']  = 0     # ANTS  
+        option['param8']  = 0      # KERNEL  
         option['param9']  = 0.0     # ORACLE  
         option['param10'] = 0.0     # PARETOMAX
         option['param11'] = 0.0     # EPSILON  
