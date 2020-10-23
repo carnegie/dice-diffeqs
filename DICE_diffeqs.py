@@ -864,7 +864,7 @@ class DICE_instance:
         option['param3']  = 0       # FSTOP (integer)
         option['param4']  = 100     # ALGOSTOP (integer) 
         option['param5']  = 0.0     # EVALSTOP  
-        option['param6']  = 0.0     # FOCUS  
+        option['param6']  = 100     # FOCUS  
         option['param7']  = 0     # ANTS  
         option['param8']  = 0      # KERNEL  
         option['param9']  = 0.0     # ORACLE  
