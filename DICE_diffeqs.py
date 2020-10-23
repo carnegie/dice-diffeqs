@@ -615,7 +615,7 @@ def dstatedt(state,params):
     #--------------------------------------------------------------------------
     # Next climate
 
-    force = params['fco22x'] * np.log2(state['mat']/params['mateq']) + params['forcoth'][timeIndex]
+    force = params['fco22x'] * np.log2(max(state['mat'],epsilon)/params['mateq']) + params['forcoth'][timeIndex]
     outgoingLW = params['fco22x'] * state['tatm'] / params['t2xco2']
     
     # Atmospheric temperature at t+1
