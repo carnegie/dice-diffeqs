@@ -250,7 +250,7 @@ def initStateParams(kwargs):
     if 'savingDecisionTimes' in kwargs.keys():
         savingDecisionTimes = kwargs['savingDecisionTimes']
     else:
-        savingDecisionTimes = [0,10,20,30,40,50,60,70,80,90,100, 130,200,280,300]
+        savingDecisionTimes = decisionTimes
     initParams['savingDecisionTimes'] = savingDecisionTimes
       
            
