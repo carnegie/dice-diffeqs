@@ -245,9 +245,15 @@ def initStateParams(kwargs):
         decisionTimes = kwargs['decisionTimes']
     else:
         decisionTimes = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
-        
-           
     initParams['decisionTimes'] = decisionTimes
+      
+    if 'savingDecisionTimes' in kwargs.keys():
+        savingDecisionTimes = kwargs['savingDecisionTimes']
+    else:
+        savingDecisionTimes = [0,10,20,30,40,50,60,70,80,90,100, 130,200,280,300]
+    initParams['savingDecisionTimes'] = savingDecisionTimes
+      
+           
     timeEnd = max(initParams['decisionTimes'] )
     initParams['timeEnd'] = timeEnd
     tlist = np.arange(0,timeEnd+dt,dt)
@@ -406,27 +412,31 @@ def DICE_fun(decisions,initState,initParams):
     # level MIU.
     # relies on globals <initState> and <initParams>
 
+    # NOTE: decisions is first miu, then rsav if present, then miuratio if present
+
     state0 = copy.deepcopy(initState)
     params = copy.deepcopy(initParams)
-    nTimes = len(initParams['decisionTimes'])
+    nDecisionTimes = len(initParams['decisionTimes'])
+    nSavingDecisionTimes = len(initParams['savingDecisionTimes'])
             
     tlist = params['tlist']
     #print(decisions)
     params['decisions'] = decisions
     # <decision> is first miu, then savings rate if present and then miuRatio if present
     if params['decisionType'] == 1: # optimize on miu only
-        params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
-    elif params['decisionType'] == 2:
+        params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nDecisionTimes])
 
-        params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
-        params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[nTimes:2*nTimes])
+    elif params['decisionType'] == 2:  # include savings rate as optimization variable
+        params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nDecisionTimes])
+        params['savings'] = np.interp(tlist,params['savingDecisionTimes'],decisions[nDecisionTimes:nDecisionTimes+nSavingDecisionTimes])
+
     else: # decisionType = 0 (specify abatement, compute savings rate)
         params['miu'] = np.interp(tlist,[0,300],[0,0,]) # 30 year ramp
         #params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # no abatement
-        params['savings'] = np.interp(tlist,params['decisionTimes'],decisions[:nTimes])
+        params['savings'] = np.interp(tlist,params['savingDecisionTimes'],decisions[:nSavingDecisionTimes])
         
     if params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:
-        params['miuRatio'] = np.interp(tlist,params['decisionTimes'],decisions[-nTimes:])
+        params['miuRatio'] = np.interp(tlist,params['decisionTimes'],decisions[-nDecisionTimes:])
         # Note: logic of <miuRatio> is to say what fraction of miu is spent on first technology
     
     info = timeEvolve(state0,params)  # uses globals initState and initParams
@@ -774,13 +784,18 @@ class DICE_instance:
         initParams = self.initParams
         
         decisionTimes = initParams['decisionTimes']
+        savingDecisionTimes = initParams['savingDecisionTimes']
+
         nDecisionTimes = len(initParams['decisionTimes'])
+        nSavingDecisionTimes = len(initParams['savingDecisionTimes'])
+
         decisionType =  initParams['decisionType']
         learningCurveOption = initParams['learningCurveOption'] 
     
         nDecisions = nDecisionTimes
         if decisionType == 2: # optimize for both abatement and savings rate
-            nDecisions += nDecisionTimes # add decisions for savings rate
+            nDecisions += nSavingDecisionTimes # add decisions for savings rate
+
         if learningCurveOption == 2:
             nDecisions += nDecisionTimes # add decisions for miuRatio
 
@@ -792,15 +807,7 @@ class DICE_instance:
         ########################################################################
         ### Step 1: Problem definition     #####################################
         ########################################################################
-    
-        # STEP 1.A: Problem dimensions
-        ##############################
-        problem['o']  = 1                       # Number of objectives 
-        problem['n']  = int(nDecisions)         # Number of variables (in total)
-        problem['ni'] = 0                       # Number of integer variables (0 <= ni <= n) 
-        problem['m']  = 0                       # Number of constraints (in total) 
-        problem['me'] = 0                       # Number of equality constraints (0 <= me <= m)
-    
+        
         # STEP 1.B: Lower and upper bounds 'xl' & 'xu'
         #############################################
         #    # STEP 1.C: Starting point 'x'
@@ -813,8 +820,8 @@ class DICE_instance:
 
         if decisionType == 2:
             # savings rate
-            act0 +=  [initParams['optlrsav'] for i in decisionTimes]
-            actupper += [1.0 for i in decisionTimes] # range(30)]
+            act0 +=  [initParams['optlrsav'] for i in savingDecisionTimes]
+            actupper += [1.0 for i in savingDecisionTimes] # range(30)]
             # initialize abatement to 1 and savings rate to "optimal"
         
         if learningCurveOption >= 2:
