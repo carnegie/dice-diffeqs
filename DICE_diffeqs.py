@@ -76,7 +76,6 @@ import numpy as np
 import utils
 import copy
 from plot_utilities import *
-#import scipy as sp
 #import copy
 import os
 import sys
@@ -424,18 +423,48 @@ def DICE_fun(decisions,initState,initParams):
     params['decisions'] = decisions
     # <decision> is first miu, then savings rate if present and then miuRatio if present
     if params['decisionType'] == 1: # optimize on miu only
+        #params['miu'] = np.maximum(0.0,np.minimum(1.2,
+        #    interpolate.interp1d(
+        #    params['decisionTimes'],
+        #    decisions[:nDecisionTimes],
+        #    kind='cubic')(tlist)
+        #    ))
         params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nDecisionTimes])
 
     elif params['decisionType'] == 2:  # include savings rate as optimization variable
+        #params['miu'] = np.maximum(0.0,np.minimum(1.2,
+        #    interpolate.interp1d(
+        #    params['decisionTimes'],
+        #    decisions[:nDecisionTimes],
+        #    kind='cubic')(tlist)
+        #    ))
         params['miu'] = np.interp(tlist,params['decisionTimes'],decisions[:nDecisionTimes])
+        #params['savings'] = np.maximum(0.0,np.minimum(1.0,
+        #    interpolate.interp1d(
+        #    params['savingDecisionTimes'],
+        #    decisions[nDecisionTimes:nDecisionTimes+nSavingDecisionTimes],
+        #    kind='cubic')(tlist)
+        #    ))
         params['savings'] = np.interp(tlist,params['savingDecisionTimes'],decisions[nDecisionTimes:nDecisionTimes+nSavingDecisionTimes])
 
     else: # decisionType = 0 (specify abatement, compute savings rate)
         params['miu'] = np.interp(tlist,[0,300],[0,0,]) # 30 year ramp
         #params['miu'] = np.interp(tlist,[0,5,35,300],[0,0,1,1]) # no abatement
+        #params['savings'] = np.maximum(0.0,np.minimum(1.0,
+        #    interpolate.interp1d(
+        #    params['savingDecisionTimes'],
+        #    decisions[:nSavingDecisionTimes],
+        #    kind='cubic')(tlist)
+        #    ))
         params['savings'] = np.interp(tlist,params['savingDecisionTimes'],decisions[:nSavingDecisionTimes])
-        
     if params['learningCurveOption'] == 2 or params['learningCurveOption'] == 3:
+        #params['miuRatio'] = np.maximum(0.0,np.minimum(1.0,
+        #    interpolate.interp1d(
+        #    params['decisionTimes'],
+        #    decisions[-nDecisionTimes:],
+        #    kind='cubic')(tlist)
+        #    ))
+
         params['miuRatio'] = np.interp(tlist,params['decisionTimes'],decisions[-nDecisionTimes:])
         # Note: logic of <miuRatio> is to say what fraction of miu is spent on first technology
     
@@ -871,7 +900,7 @@ class DICE_instance:
         option['param3']  = 0       # FSTOP (integer)
         option['param4']  = 100     # ALGOSTOP (integer) 
         option['param5']  = 0.0     # EVALSTOP  
-        option['param6']  = 100     # FOCUS  
+        option['param6']  = 1000     # FOCUS  
         option['param7']  = 0     # ANTS  
         option['param8']  = 0      # KERNEL  
         option['param9']  = 0.0     # ORACLE  
@@ -921,3 +950,10 @@ class DICE_instance:
         root_dir = "."
 
         return [problem,option,solution,initParams,info]
+# %%
+
+# %%
+
+# %%
+
+# %%
