@@ -848,7 +848,7 @@ class DICE_instance:
 
         actLower = [0] * nDecisions
 
-        act0 = [0.5] * nDecisions
+        act0 = np.array(actUpper)*0.5/nTechs # Start assuming each technology contributes equally to half of max
 
         if initParams['optSavings']:
             actUpper[-nSavingDecisionTimes:] =  [1.0] * nSavingDecisionTimes
@@ -911,7 +911,7 @@ class DICE_instance:
         option['param3']  = 0       # FSTOP (integer)
         option['param4']  = 100     # ALGOSTOP (integer) 
         option['param5']  = 0.0     # EVALSTOP  
-        option['param6']  = 1000     # FOCUS  
+        option['param6']  = 1e5     # FOCUS  
         option['param7']  = 0     # ANTS  
         option['param8']  = 0      # KERNEL  
         option['param9']  = 0.0     # ORACLE  

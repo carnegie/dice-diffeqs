@@ -16,7 +16,6 @@ import cProfile
 
 from DICE_diffeqs import DICE_instance
 
-
 #%%
 
 # starting point has learning curve of 10 k$ at 10,000 tCO2, and a learning rate of 12% per doubling.
@@ -38,7 +37,8 @@ if __name__ == "__main__":
             # NOTE: <decisionTimes> are also the times assumed for specified limits on miu
 
             limMiuLower = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], # lower limit on miu values (= sum across all techs)
-            limMiuUpper = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], # upper limit on miu values (= sum across all techs)
+            #limMiuUpper = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], # upper limit on miu values (= sum across all techs)
+            limMiuUpper = [1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2], # upper limit on miu values (= sum across all techs)
             limmiu = 1.2, # upper limit on any individual technology
 
             optSavings = True, # True means to optimize on savings rate, False means to use default DICE value
@@ -68,7 +68,7 @@ if __name__ == "__main__":
             parallel = 15, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             #parallel = 1, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             
-            maxeval = 20000,  # maxeval maximum number of iterations for solver
+            maxeval = 100000,  # maxeval maximum number of iterations for solver
             #maxeval =  2,  # maxeval maximum number of iterations for solver
 
             damageCostRatio = 1.0, # scaling on climate damage
