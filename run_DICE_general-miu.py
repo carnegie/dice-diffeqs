@@ -68,7 +68,7 @@ if __name__ == "__main__":
             parallel = 15, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             #parallel = 1, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             
-            maxeval = 100000,  # maxeval maximum number of iterations for solver
+            maxeval = 1000,  # maxeval maximum number of iterations for solver
             #maxeval =  2,  # maxeval maximum number of iterations for solver
 
             damageCostRatio = 1.0, # scaling on climate damage
@@ -76,5 +76,10 @@ if __name__ == "__main__":
             abatementCostRatio = 1.0 # scaling on abatement costs (multiplies costs above for all techs)
 
         )
+
+                
+        pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resultCentral.out))
+
+        write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
    

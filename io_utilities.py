@@ -7,6 +7,8 @@ Created on Fri Mar  8 11:50:02 2019
 import os
 import pickle
 import types
+import re
+import numpy as np
 
 #%%
 def pickle_results ( output_path, file_name, data ):
@@ -48,7 +50,15 @@ def write_CSV_from_pickle( output_path, file):
 
     with open(output_path + '/' + file + '.csv', 'w') as f:
         for key in info.keys():
-            f.write("%s,%s\n"%(key,str(info[key])[1:-1]))
+            item = np.array(info[key])
+            if 1 == len(item.shape):
+                # vector
+                print (str(info[key]))
+                f.write("%s,%s\n"%(key,re.sub("\ \ +"," ",str(info[key])[1:-1].replace("\n","")).replace(" ",",")))
+            else:
+                # array
+                for idx in range(item.shape[1]):  # loop over columns
+                    f.write("%s,%s\n"%(key+'_'+str(idx),re.sub("\ \ +"," ",str(item[:,idx])[1:-1].replace("\n","")).replace(" ",","))) 
             # f.write("%s,%s\n"%(key,info[key]))
         f.write("%s,%s\n" %('act',str(act)[1:-1]))
         # f.write("%s,%s\n" %('act',act))

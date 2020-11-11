@@ -490,6 +490,18 @@ def dstatedt(state, params, info):
     nTechs = params['nTechs']
     expcost2 = params['expcost2']
     firstUnitFractionalCost = params['firstUnitFractionalCost']  
+    techLearningCurve =  params['techLearningCurve']
+    techLearningSubsidy = params['techLearningSubsidy']
+
+    tOceanState = state['tocean']
+    tAtmState = state['tatm']
+    mUState = state['mu']
+    mLState = state['ml']
+    mAtState = state['mat']
+    mateq = params['mateq']
+    mueq = params['mueq']
+    mleq = params['mleq'] 
+     
 
     # these get created because they get updated
     miu = info['miu']
@@ -548,7 +560,7 @@ def dstatedt(state, params, info):
     # compute pBackTime
 
     for idxTech in list(range(nTechs)):
-        if params['techLearningCurve'][idxTech]:
+        if techLearningCurve[idxTech]:
             #Learning curve
             pBackTime[idxTime,idxTech] =  (
                 params['abatementCostRatio'] * params['techInitCost'][idxTech]*
@@ -565,14 +577,14 @@ def dstatedt(state, params, info):
 
     mcAbate[idxTime] = 1.e20
     for idxTech in list(range(nTechs)):
-        if params['techLearningSubsidy'][idxTech] or not params['techLearningCurve'][idxTech]:
+        if techLearningSubsidy[idxTech] or not techLearningCurve[idxTech]:
             mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* miuTech[idxTime,idxTech]**(expcost2 - 1.0))
             mcAbate[idxTime] = min(mcAbate[idxTime],mcAbateTech[idxTime,idxTech]) 
 
     # --------- handle learning curve with no learning subsidy as a special case after these cases are done
     #------------ now handle no subsidy learning curve case
     for idxTech in list(range(nTechs)):
-        if  not params['techLearningSubsidy'][idxTech] and params['techLearningCurve'][idxTech]:
+        if  not techLearningSubsidy[idxTech] and techLearningCurve[idxTech]:
 
             if mcAbate[idxTime] < pBackTime[idxTime,idxTech] * firstUnitFractionalCost[idxTech] and pBackTime[idxTime,idxTech] > 0:
                 miuTech[idxTime,idxTech] = (
@@ -610,7 +622,7 @@ def dstatedt(state, params, info):
     abateFrac[idxTime] = abateCost[idxTime] / yGross[idxTime]    # <abateCost> is total of abatement this time step 
 
     # Climate damage cost at t
-    damageFrac[idxTime] = params['damageCostRatio'] * ( params['a1'] * state['tatm'] + params['a2'] * state['tatm']**params['a3'] )
+    damageFrac[idxTime] = params['damageCostRatio'] * ( params['a1'] * tAtmState + params['a2'] * tAtmState**params['a3'] )
     damages[idxTime] = yGross[idxTime] * damageFrac[idxTime]
 
     # Gross domestic product NET of damage and abatement costs at t ($ 2005 per year)
@@ -648,32 +660,32 @@ def dstatedt(state, params, info):
     #--------------------------------------------------------------------------
     # Next climate
 
-    force = params['fco22x'] * np.log2(max(state['mat'],epsilon)/params['mateq']) + params['forcoth'][idxTime]
-    outgoingLW = params['fco22x'] * state['tatm'] / params['t2xco2']
+    force = params['fco22x'] * np.log2(max(mAtState,epsilon)/mateq) + params['forcoth'][idxTime]
+    outgoingLW = params['fco22x'] * tAtmState / params['t2xco2']
     
     # Atmospheric temperature at t+1
-    dstate['tatm'] =  params['c1'] * (force - outgoingLW) + params['c3'] * (state['tocean'] - state['tatm'])
+    dstate['tatm'] =  params['c1'] * (force - outgoingLW) + params['c3'] * (tOceanState - tAtmState)
         
     # Deep ocean temperature at t+1
-    dstate['tocean'] =  params['c4'] * (state['tatm'] - state['tocean'])
+    dstate['tocean'] =  params['c4'] * (tAtmState - tOceanState)
     
     #--------------------------------------------------------------------------
     # Next do carbon
     #b11 = 1. - params['b12']
-    #b21 = params['b12']*params['mateq']/params['mueq']
+    #b21 = params['b12']*mateq/mueq
     #b22 = 1 - b21 - params['b23'];
-    #b32 = params['b23']*params['mueq']/params['mleq'] 
+    #b32 = params['b23']*mueq/mleq 
     #b33 = 1 - b32 
 
     # Atmospheric C carbon content ofcrease at t+1 (tC from 1750)
-    dstate['mat'] = eTot[idxTime] + params['b12'] * (state['mu']*params['mateq']/params['mueq'] - state['mat'] )
+    dstate['mat'] = eTot[idxTime] + params['b12'] * (mUState*mateq/mueq - mAtState )
     
     # Shallow ocean C carbon content ofcrease at t+1 (tC from 1750)
-    dstate['mu'] = params['b12'] * ( state['mat'] - state['mu']*params['mateq']/params['mueq']) + \
-                   params['b23']*  ( state['ml']*params['mueq']/params['mleq'] - state['mu'])
+    dstate['mu'] = params['b12'] * ( mAtState - mUState*mateq/mueq) + \
+                   params['b23']*  ( mLState*mueq/mleq - mUState)
     
     # Deep ocean C carbon content crease at t+1 (tC from 1750)
-    dstate['ml'] = params['b23']*( state['mu'] - state['ml']*params['mueq']/params['mleq'])
+    dstate['ml'] = params['b23']*( mUState - mLState*mueq/mleq)
 
     dstate['cumAbateTech'] = abateAmountTech[idxTime]
         
@@ -683,15 +695,15 @@ def dstatedt(state, params, info):
     # tendencies for recording
     k[idxTime] = state['k']
     dk[idxTime] = dstate['k']
-    tatm[idxTime] = state['tatm']
+    tatm[idxTime] = tAtmState
     dtatm[idxTime] = dstate['tatm']
-    tocean[idxTime] = state['tocean']
+    tocean[idxTime] = tOceanState
     dtocean[idxTime] = dstate['tocean']
-    mat[idxTime] = state['mat']
+    mat[idxTime] = mAtState
     dmat[idxTime] = dstate['mat']
-    mu[idxTime] = state['mu']
+    mu[idxTime] = mUState
     dmu[idxTime] = dstate['mu']
-    ml[idxTime] = state['ml']
+    ml[idxTime] = mLState
     dml[idxTime] = dstate['ml']
     cumAbateTech[idxTime] = state['cumAbateTech']
 
@@ -726,17 +738,23 @@ def interpStep(t, timePoints, dataPoints):
 
 
 
-def DICE_fun(decisions,initState,initParams,initInfo):
+def DICE_fun(decisions,state,params,info):
     # Initially we are going to assume that the only decision are the abatement
     # level MIU.
     # relies on globals <initState> and <initParams>
 
     # NOTE: decisions is first the various miu values, then rsav if present
 
+    """
     state = copy.deepcopy(initState)  # seems like this could be made more efficient by only making copies of the parts that need copies
     params = copy.deepcopy(initParams)  # seems like this could be made more efficient by only making copies of the parts that need copies
     info = copy.deepcopy(initInfo)  # seems like this could be made more efficient by only making copies of the parts that need copies
 
+    state = initState  # seems like this could be made more efficient by only making copies of the parts that need copies
+    params = initParams  # seems like this could be made more efficient by only making copies of the parts that need copies
+    info = initInfo  # seems like this could be made more efficient by only making copies of the parts that need copies
+    """
+    
     nDecisionTimes = len(params['decisionTimes'])
     nSavingDecisionTimes = len(params['savingDecisionTimes'])
     nTechs = params['nTechs']   
