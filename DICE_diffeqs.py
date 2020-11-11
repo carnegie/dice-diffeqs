@@ -419,107 +419,62 @@ def initStateParamsInfo(kwargs):
 
     # state variables
 
-    initInfo['tatm'] = timeShape
-    initInfo['tocean'] = timeShape
-    initInfo['mat'] = timeShape
-    initInfo['mu'] = timeShape
-    initInfo['ml'] = timeShape
-    initInfo['k'] = timeShape
-    initInfo['cumAbateTech'] = timeTechShape # not always a state variable
+    initInfo['tatm'] = timeShape.copy()
+    initInfo['tocean'] = timeShape.copy()
+    initInfo['mat'] = timeShape.copy()
+    initInfo['mu'] = timeShape.copy()
+    initInfo['ml'] = timeShape.copy()
+    initInfo['k'] = timeShape.copy()
+    initInfo['cumAbateTech'] = timeTechShape.copy().copy() # not always a state variable
 
     # dstate variables
 
-    initInfo['dtatm'] = timeShape
-    initInfo['dtocean'] = timeShape
-    initInfo['dmat'] = timeShape
-    initInfo['dmu'] = timeShape
-    initInfo['dml'] = timeShape
-    initInfo['dk'] = timeShape
-    initInfo['dcumAbateTech'] = timeTechShape # not always a state variable
+    initInfo['dtatm'] = timeShape.copy()
+    initInfo['dtocean'] = timeShape.copy()
+    initInfo['dmat'] = timeShape.copy()
+    initInfo['dmu'] = timeShape.copy()
+    initInfo['dml'] = timeShape.copy()
+    initInfo['dk'] = timeShape.copy()
+    initInfo['dcumAbateTech'] = timeTechShape.copy().copy() # not always a state variable
 
     # informational
 
-    initInfo['yGross'] = timeShape
-    initInfo['damageFrac'] = timeShape
-    initInfo['damages'] = timeShape
-    initInfo['y'] = timeShape
-    initInfo['c'] = timeShape
+    initInfo['yGross'] = timeShape.copy()
+    initInfo['damageFrac'] = timeShape.copy()
+    initInfo['damages'] = timeShape.copy()
+    initInfo['y'] = timeShape.copy()
+    initInfo['c'] = timeShape.copy()
     
-    initInfo['rsav'] = timeShape
-    initInfo['inv'] = timeShape
-    initInfo['cpc'] = timeShape
-    initInfo['periodu'] = timeShape
-    initInfo['cemutotper'] = timeShape
+    initInfo['rsav'] = timeShape.copy()
+    initInfo['inv'] = timeShape.copy()
+    initInfo['cpc'] = timeShape.copy()
+    initInfo['periodu'] = timeShape.copy()
+    initInfo['cemutotper'] = timeShape.copy()
     
-    initInfo['eGross'] = timeShape
-    initInfo['eTot'] = timeShape
-    initInfo['eInd'] = timeShape
-    initInfo['abateAmount'] = timeShape 
-    initInfo['abateAmountTech']  =  timeTechShape
-    initInfo['abateFrac'] = timeShape
+    initInfo['eGross'] = timeShape.copy()
+    initInfo['eTot'] = timeShape.copy()
+    initInfo['eInd'] = timeShape.copy()
+    initInfo['abateAmount'] = timeShape.copy() 
+    initInfo['abateAmountTech']  =  timeTechShape.copy().copy()
+    initInfo['abateFrac'] = timeShape.copy()
     
-    initInfo['abateCost'] = timeShape
-    initInfo['abateCostTech']  =  timeTechShape
+    initInfo['abateCost'] = timeShape.copy()
+    initInfo['abateCostTech']  =  timeTechShape.copy().copy()
     
-    initInfo['pBackTime']  =  timeTechShape  
+    initInfo['pBackTime']  =  timeTechShape.copy().copy()  
     
-    initInfo['mcAbate'] = timeShape
-    initInfo['mcAbateTech'] = timeTechShape
+    initInfo['mcAbate'] = timeShape.copy()
+    initInfo['mcAbateTech'] = timeTechShape.copy()
     
-    initInfo['miu'] = timeShape 
-    # initInfo['miuTech'] = timeTechShape -- in params
+    initInfo['miu'] = timeShape.copy() 
+    # initInfo['miuTech'] = timeTechShape.copy() -- in params
         
-    initInfo['force'] = timeShape
-    initInfo['outgoingLW'] = timeShape 
-    initInfo['sigma'] = timeShape 
+    initInfo['force'] = timeShape.copy()
+    initInfo['outgoingLW'] = timeShape.copy() 
+    initInfo['sigma'] = timeShape.copy() 
     
     return initState,initParams,initInfo
 
-def DICE_fun(decisions,initState,initParams,initInfo):
-    # Initially we are going to assume that the only decision are the abatement
-    # level MIU.
-    # relies on globals <initState> and <initParams>
-
-    # NOTE: decisions is first the various miu values, then rsav if present
-
-    state = copy.deepcopy(initState)  # seems like this could be made more efficient by only making copies of the parts that need copies
-    params = copy.deepcopy(initParams)  # seems like this could be made more efficient by only making copies of the parts that need copies
-    info = copy.deepcopy(initInfo)  # seems like this could be made more efficient by only making copies of the parts that need copies
-
-    nDecisionTimes = len(params['decisionTimes'])
-    nSavingDecisionTimes = len(params['savingDecisionTimes'])
-    nTechs = params['nTechs']   
-    tlist = params['tlist']
-    dt = params['dt']
-    nTimeSteps = params['nTimeSteps']
-    params['decisions'] = decisions
-
-    miuTech = np.zeros((nTimeSteps,nTechs))
-    idxTechDecision = 0
-    for idxTech in list(range(nTechs)):
-        if not ( not params['techLearningSubsidy'][idxTech] and params['techLearningCurve'][idxTech] ):
-            miuTech[:,idxTech] = np.interp(tlist,params['decisionTimes'],decisions[idxTechDecision*nDecisionTimes:(idxTechDecision+1)*nDecisionTimes])
-            idxTechDecision += 1
-        else:
-            miuTech[:,idxTech] = 0
-    params['miuTech'] = miuTech
-
-    if params['optSavings']:
-        params['savings'] = np.interp(tlist,params['savingDecisionTimes'],decisions[-nSavingDecisionTimes:])
-    
-    for idxTime in list(range(params['nTimeSteps'])):
-        params['idxTime'] = idxTime
-         
-        dstate = dstatedt(state, params, info)  # params is a global used by dstatedt
-        
-        # eulers method (1 is OK, 0.5 seems fine)
-        for key in state:
-            state[key] +=  dt * dstate[key]
-
-    #print (1.e-9*float(np.sum(info['cemutotper'])))
-    
-    
-    return float(np.sum(info['cemutotper'])),info
 
 def dstatedt(state, params, info):
 
@@ -771,6 +726,55 @@ def interpStep(t, timePoints, dataPoints):
 
 
 
+def DICE_fun(decisions,initState,initParams,initInfo):
+    # Initially we are going to assume that the only decision are the abatement
+    # level MIU.
+    # relies on globals <initState> and <initParams>
+
+    # NOTE: decisions is first the various miu values, then rsav if present
+
+    state = copy.deepcopy(initState)  # seems like this could be made more efficient by only making copies of the parts that need copies
+    params = copy.deepcopy(initParams)  # seems like this could be made more efficient by only making copies of the parts that need copies
+    info = copy.deepcopy(initInfo)  # seems like this could be made more efficient by only making copies of the parts that need copies
+
+    nDecisionTimes = len(params['decisionTimes'])
+    nSavingDecisionTimes = len(params['savingDecisionTimes'])
+    nTechs = params['nTechs']   
+    tlist = params['tlist']
+    dt = params['dt']
+    nTimeSteps = params['nTimeSteps']
+    params['decisions'] = decisions
+  
+
+    miuTech = np.zeros((nTimeSteps,nTechs))
+    idxTechDecision = 0
+    for idxTech in list(range(nTechs)):
+        if not ( not params['techLearningSubsidy'][idxTech] and params['techLearningCurve'][idxTech] ):
+            miuTech[:,idxTech] = np.interp(tlist,params['decisionTimes'],decisions[idxTechDecision*nDecisionTimes:(idxTechDecision+1)*nDecisionTimes])
+            idxTechDecision += 1
+        else:
+            miuTech[:,idxTech] = 0
+    params['miuTech'] = miuTech
+
+    if params['optSavings']:
+        params['savings'] = np.interp(tlist,params['savingDecisionTimes'],decisions[-nSavingDecisionTimes:])
+    
+    for idxTime in list(range(params['nTimeSteps'])):
+        params['idxTime'] = idxTime
+         
+        dstate = dstatedt(state, params, info)  # params is a global used by dstatedt
+        
+        # eulers method (1 is OK, 0.5 seems fine)
+        for key in state:
+            state[key] +=  dt * dstate[key]
+
+    #print (1.e-9*float(np.sum(info['cemutotper'])))
+    #print('decisions')
+    #print(decisions) 
+    #print('params[miuTech]')
+    #print(params['miuTech']) 
+
+    return float(np.sum(info['cemutotper'])),info
 
 #############################################################################
 #####    Main DICE Function                              ####################
@@ -803,6 +807,15 @@ class DICE_instance:
 
         # "Without loss of generality, all objectives are subject to minimization."
         # http://www.midaco-solver.com/data/other/MIDACO_User_Manual.pdf
+
+        #print( 'info[miu]')
+        #print( info['miu']  )
+        ##print( 'miuDecisions')
+        #print( miuDecisions  )
+        #print( 'act')
+        #print( act)
+        #print('result')
+        #print ( [[-welfare],list(gConstraints)])
 
         return [[-welfare],gConstraints]
 
@@ -840,6 +853,7 @@ class DICE_instance:
         if initParams['optSavings']:
             actUpper[-nSavingDecisionTimes:] =  [1.0] * nSavingDecisionTimes
             act0[-nSavingDecisionTimes:] = [initParams['optlrsav'] for i in initParams['savingDecisionTimes']]
+            act0[-1] = 0.0 # assume last time period is zero
 
         ########################################################################
         ### Step 1: Problem definition     #####################################

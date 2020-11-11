@@ -65,9 +65,11 @@ if __name__ == "__main__":
 
             prstp = 0.03, # pure rate of time preference (0.015 is DICE default ; for default, just comment out and don't define )
                 
-            parallel = 1, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+            parallel = 15, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
+            #parallel = 1, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             
-            maxeval = 2,  # maxeval maximum number of iterations for solver
+            maxeval = 20000,  # maxeval maximum number of iterations for solver
+            #maxeval =  2,  # maxeval maximum number of iterations for solver
 
             damageCostRatio = 1.0, # scaling on climate damage
 
