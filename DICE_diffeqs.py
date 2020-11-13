@@ -126,28 +126,37 @@ def initStateInfo(kwargs):
         info['decisionTimes'] = kwargs['decisionTimes']
     else:
         info['decisionTimes'] = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
+
+    #---------------------------------------------------------------------------
+    #------- Process information about time -------- ---------------------------
+    #---------------------------------------------------------------------------
+
+       
+    timeEnd = max(info['decisionTimes'] )
+    info['timeEnd'] = timeEnd
+    tlist = np.arange(0,timeEnd+dt,dt)
+    nTimeSteps = len(tlist)
+    info['nTimeSteps'] = nTimeSteps
     
        #-----> upper and lower bound on the sum of mius for each technology
 
     if 'limMiuLower' in kwargs.keys():
-        print( kwargs['limMiuLower'])
         if isinstance(kwargs['limMiuLower'], list):
             info['limMiuLower'] = kwargs['limMiuLower']
         else:
             info['limMiuLower'] = len(info['decisionTimes'])*[kwargs['limMiuLower']]
     else:
         info['limMiuLower'] = len(info['decisionTimes'])*[0]  
-    print( info['limMiuLower'])
+    info['limMiuLowerInterp'] =  np.interp(tlist,info['decisionTimes'],info['limMiuLower'])
 
     if 'limMiuUpper' in kwargs.keys():
-        print( kwargs['limMiuUpper'])
         if isinstance(kwargs['limMiuUpper'], list):
             info['limMiuUpper'] = kwargs['limMiuUpper']
         else:
             info['limMiuUpper'] = len(info['decisionTimes'])*[kwargs['limMiuUpper']]
     else:
         info['limMiuUpper'] = len(info['decisionTimes'])*[1.2]  # DICE default
-    print( info['limMiuUpper'])
+    info['limMiuUpperInterp'] =  np.interp(tlist,info['decisionTimes'],info['limMiuUpper'])
 
     # optimize on savings rate?
 
@@ -257,24 +266,21 @@ def initStateInfo(kwargs):
     if 'maxeval' in kwargs.keys():
         info['maxeval'] = kwargs['maxeval']
     else:
-        info['maxeval'] = 1000
-       
-    #---------------------------------------------------------------------------
-    #------- Process information about time -------- ---------------------------
-    #---------------------------------------------------------------------------
+        info['maxeval'] = 1000    
+        
+    #-----> FOCUS midaco option 
 
+    if 'FOCUS' in kwargs.keys():
+        info['FOCUS'] = kwargs['FOCUS']
+    else:
+        info['FOCUS'] = 0
        
-    timeEnd = max(info['decisionTimes'] )
-    info['timeEnd'] = timeEnd
-    tlist = np.arange(0,timeEnd+dt,dt)
-    info['tlist'] = tlist
-    nTimeSteps = len(tlist)
-    info['nTimeSteps'] = nTimeSteps
+
    
     #---------------------------------------------------------------------------
     #------- Get various DICE parameter values ---------------------------------
     #---------------------------------------------------------------------------
-
+    info['tlist'] = tlist
     
     #** Preferences
     info['elasmu'] = 1.45 # Elasticity of marginal utility of consumption     /1.45 /
@@ -588,7 +594,7 @@ def dstatedt(state, info):
     mcAbate[idxTime] = 1.e20
     for idxTech in list(range(nTechs)):
         if techLearningSubsidy[idxTech] or not techLearningCurve[idxTech]:
-            mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* miuTech[idxTime,idxTech]**(expcost2 - 1.0))
+            mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* max(epsilon,miuTech[idxTime,idxTech])**(expcost2 - 1.0))
             mcAbate[idxTime] = min(mcAbate[idxTime],mcAbateTech[idxTime,idxTech]) 
 
     # --------- handle learning curve with no learning subsidy as a special case after these cases are done
@@ -596,9 +602,9 @@ def dstatedt(state, info):
     for idxTech in list(range(nTechs)):
         if  not techLearningSubsidy[idxTech] and techLearningCurve[idxTech]:
 
-            if mcAbate[idxTime] > pBackTime[idxTime,idxTech] * firstUnitFractionalCost[idxTech] and pBackTime[idxTime,idxTech] > 0:
-                miuTech[idxTime,idxTech] = ((mcAbateTech[idxTime] - firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech])/
-                                            ((1 - firstUnitFractionalCost[idxTech])*pBackTime[idxTime,idxTech]))**(1/(-1 + expcost2))
+            if mcAbate[idxTime] > firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech] and pBackTime[idxTime,idxTech] > 0:
+                miuTech[idxTime,idxTech] = ((mcAbate[idxTime] - firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech])/
+                                            ((1. - firstUnitFractionalCost[idxTech])*pBackTime[idxTime,idxTech]))**(1./(-1. + expcost2))
                 mcAbateTech[idxTime,idxTech] = mcAbate[idxTime]
             else:
                 miuTech[idxTime,idxTech] =  0.0 # This case doesn't really make sense. If pBackTime == 0 , it can't hope to equal marginal cost of pBackTime0   
@@ -613,7 +619,7 @@ def dstatedt(state, info):
             
         abateCostTech[idxTime,idxTech] = (
             eGross[idxTime] *  pBackTime[idxTime,idxTech] * 
-            ( firstUnitFractionalCost[idxTech] * miuTech[idxTime,idxTech]  + (1.0 - firstUnitFractionalCost[idxTech] ) *  miuTech[idxTime,idxTech]**expcost2 / expcost2) 
+            ( firstUnitFractionalCost[idxTech] * miuTech[idxTime,idxTech]  + (1.0 - firstUnitFractionalCost[idxTech] ) *   max(epsilon,miuTech[idxTime,idxTech]) **expcost2 / expcost2) 
         )
         abateCost[idxTime] += abateCostTech[idxTime,idxTech]
 
@@ -621,7 +627,10 @@ def dstatedt(state, info):
         abateAmount[idxTime] += abateAmountTech[idxTime,idxTech] 
 
     # Industrial CO2 emission at t (tCO2)
-    eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] # industrial emissions
+    if miu[idxTime] <=  info['limMiuUpperInterp'][idxTime]:
+        eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] # industrial emissions
+    else:
+        eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] * info['limMiuUpperInterp'][idxTime] / miu[idxTime] # industrial emissions
 
     # Forest-related CO2 emissions
     # Total CO2 emission at t (tCO2)
@@ -764,12 +773,16 @@ def DICE_fun(decisions,state,info):
 
     nDecisionTimes = len(info['decisionTimes'])
     nSavingDecisionTimes = len(info['savingDecisionTimes'])
-    nTechs = info['nTechs']   
+    nTechs = info['nTechs']  
+    nDecisionTechs = info['nDecisionTechs'] 
     tlist = info['tlist']
     dt = info['dt']
     nTimeSteps = info['nTimeSteps']
+
+      # undo effort of making first decision be sum.
+    for idx in list(range(nDecisionTimes)):  # make first element of deployment be sum and unpack in
+        decisions[idx] = decisions[idx] - np.sum(decisions[idx+nDecisionTimes:idx+nDecisionTechs*nDecisionTimes:nDecisionTimes])
     info['decisions'] = decisions
-  
 
     miuTech = np.zeros((nTimeSteps,nTechs))
     idxTechDecision = 0
@@ -826,7 +839,8 @@ class DICE_instance:
         # keep the sum of the mius of all of the technologies within the time dependent bounds.
         # #  Inequality constraints G(X) >= 0 
         miuDecisions = info['miu'][info['decisionTimes']]
-        gConstraints = list(miuDecisions - info['limMiuLower']) + list(info['limMiuUpper'] - miuDecisions)
+        #gConstraints = list(miuDecisions - info['limMiuLower']) + list(info['limMiuUpper'] - miuDecisions)
+        gConstraints = list(miuDecisions - info['limMiuLower'])  # upper bound constraint is now applied in diffeqs
 
         # "Without loss of generality, all objectives are subject to minimization."
         # http://www.midaco-solver.com/data/other/MIDACO_User_Manual.pdf
@@ -865,12 +879,15 @@ class DICE_instance:
         ### Step 1: Problem definition     #####################################
         ########################################################################
         
-        actUpper = [1.0] * nDecisions
+        actUpper = [1.0] * nDecisions # set this also for savings rate, just in case it exists
         actUpper[:nDecisionTimes*nDecisionTechs] = [info['limMiuUpper'][np.mod(i,nDecisionTimes)] for i in list(range(nDecisionTimes*nDecisionTechs))]
 
         actLower = [0] * nDecisions
+        actLower[:nDecisionTimes*nDecisionTechs] = [info['limMiuLower'][np.mod(i,nDecisionTimes)] for i in list(range(nDecisionTimes*nDecisionTechs))]
 
         act0 = np.array(actUpper)*0.5/nTechs # Start assuming each technology contributes equally to half of max
+        for idx in list(range(nDecisionTimes)):  # make first element of deployment be sum and unpack in
+            act0[idx] = np.sum(act0[idx:idx+nDecisionTechs*nDecisionTimes:nDecisionTimes])
 
         if info['optSavings']:
             actUpper[-nSavingDecisionTimes:] =  [1.0] * nSavingDecisionTimes
@@ -905,7 +922,7 @@ class DICE_instance:
         problem['o']  = 1                       # Number of objectives 
         problem['n']  = int(nDecisions) # Number of variables (in total)
         problem['ni'] = 0                       # Number of integer variables (0 <= ni <= n) 
-        problem['m']  = 2 * nDecisionTimes      # Number of constraints (in total)  [max and min on miu for each time step]
+        problem['m']  = nDecisionTimes      # Number of constraints (in total)  [max and min on miu for each time step]
         problem['me'] = 0                       # Number of equality constraints (0 <= me <= m)
         
         ########################################################################
@@ -933,7 +950,7 @@ class DICE_instance:
         option['param3']  = 0       # FSTOP (integer)
         option['param4']  = 100     # ALGOSTOP (integer) 
         option['param5']  = 0.0     # EVALSTOP  
-        option['param6']  = 1e5     # FOCUS  
+        option['param6']  = info['FOCUS']     # FOCUS  
         option['param7']  = 0     # ANTS  
         option['param8']  = 0      # KERNEL  
         option['param9']  = 0.0     # ORACLE  

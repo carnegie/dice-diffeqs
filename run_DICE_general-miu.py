@@ -22,7 +22,7 @@ from DICE_diffeqs import DICE_instance
 
 if __name__ == "__main__":
 
-        caseName = 'test2_100k'
+        caseName = 'test1_100k'
 
         # If no arg is given, run vanilla DICE
 
@@ -40,8 +40,8 @@ if __name__ == "__main__":
             limMiuLower = 0, # can be scalar or vector of len(decisionTimes)
             #limMiuUpper = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], # upper limit on miu values (= sum across all techs)
             #limMiuUpper = [1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2], # upper limit on miu values (= sum across all techs)
-            limMiuUpper = 1.2, # can be scalar or vector of len(decisionTimes)
-            limmiu = 1.2, # upper limit on any individual technology
+            limMiuUpper = 1.0, # can be scalar or vector of len(decisionTimes)
+            limmiu = 1.0, # upper limit on any individual technology
 
             optSavings = True, # True means to optimize on savings rate, False means to use default DICE value
 
@@ -71,7 +71,9 @@ if __name__ == "__main__":
             #parallel = 1, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             
             maxeval = 100000,  # maxeval maximum number of iterations for solver
-            #maxeval =  2,  # maxeval maximum number of iterations for solver
+            #maxeval =  100,  # maxeval maximum number of iterations for solver
+
+            FOCUS  = 100, # FOCUS parameter for midaco solver
 
             damageCostRatio = 1.0, # scaling on climate damage
 
@@ -85,3 +87,4 @@ if __name__ == "__main__":
         write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
 
    
+# %%
