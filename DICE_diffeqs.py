@@ -480,11 +480,11 @@ def initStateInfo(kwargs):
     
     info['mcAbate'] = timeShape.copy()
     info['mcAbateTech'] = timeTechShape.copy()
-    
-    info['miu'] = timeShape.copy() 
         
     info['force'] = timeShape.copy()
     info['outgoingLW'] = timeShape.copy() 
+
+    info['miu'] = timeShape.copy() 
     
     return state,info
 
@@ -754,7 +754,7 @@ def interpStep(t, timePoints, dataPoints):
 
 
 
-def DICE_fun(decisions,state,info):
+def DICE_fun(act,state,info):
     # Initially we are going to assume that the only decision are the abatement
     # level MIU.
     # relies on globals <state> and <info>
@@ -778,6 +778,8 @@ def DICE_fun(decisions,state,info):
     tlist = info['tlist']
     dt = info['dt']
     nTimeSteps = info['nTimeSteps']
+
+    for 
 
       # undo effort of making first decision be sum.
     for idx in list(range(nDecisionTimes)):  # make first element of deployment be sum and unpack in
@@ -856,6 +858,76 @@ class DICE_instance:
 
         return [[-welfare],gConstraints]
 
+    def compressDecision(decisions,info):
+        # compress out miu decision when max and min values are constrained to be the same thing
+
+        nDecisionTimes = len(info['decisionTimes'])
+
+        limMiuUpper = info['limMiuUpper']
+        limMiuLower =info['limMiuLower']
+
+        nMiuDecisions = np.count_zero(limMiuUpper != limMiuLower)
+
+        if nMiuDecisions == nDecisionTims:
+
+            act = decisions
+
+        else: # some time periods are constrained
+
+            miuDecisions = np.zeros(nMiuDecisions) # create empty vector        
+            icount = 0
+            for idx in range(nDecisions):
+                if limMiuUpper[idx] > limMiuLower[idx]:
+                    miuDecisions[icount] = act[idx]
+                    icount += 1
+            decisions = np.concatenate(miuDecisions,act[nDecisionTimes:])
+        
+        return decisions
+
+    def decompressDecision(act,info):
+        # compress out miu decision when max and min values are constrained to be the same thing
+        decisionTimes = info['decisionTimes']
+        savingDecisionTimes = info['savingDecisionTimes']
+
+        nDecisionTimes = len(info['decisionTimes'])
+        nSavingDecisionTimes = len(info['savingDecisionTimes'])
+
+        nTechs =  info['nTechs'] # total number of technologies in resuls
+        nDecisionTechs = info['nDecisionTechs']
+
+        limMiuUpper = info['limMiuUpper']
+        limMiuLower =info['limMiuLower']
+
+        if info['optSavings']:
+            nDecisions = nDecisionTimes * nDecisionTechs + nSavingDecisionTimes
+        else:
+            nDecisions = nDecisionTimes * nDecisionTechs
+
+        nMiuDecisions = np.count_zero(limMiuUpper != limMiuLower)
+
+        if nMiuDecisions == nDecisions:
+            decisions = act
+        else: # some time periods are constrained
+            miuDecisions = np.zeros(nMiuDecisions) # create empty vector
+        
+            icount = 0
+            for idx in range(nDecisions):
+                if limMiuUpper[idx] > limMiuLower[idx]:
+                    miuDecisions[icount] = act[idx]
+                    icount += 1
+
+            decisions = np.concatenate(miuDecisions,act[nDecisionTimes:])
+        
+        return decisions
+
+
+        
+
+        
+    
+
+
+
     def runDICEeq(self):
 
         state = self.state
@@ -878,6 +950,13 @@ class DICE_instance:
         ########################################################################
         ### Step 1: Problem definition     #####################################
         ########################################################################
+
+        # Note that in this version, for computational reasons, the variables used for optimization differ 
+        # from those used internally by the differential equation code.
+
+        # In the code it makes sense to have miu[idxTech] for each tech. But numerically, it is better to have the sum of all miu's as the first variable
+        # and then the fraction of the sum of miu's used by the first, second, nth technology.
+        # the last technology with a decision gets the remainder.
         
         actUpper = [1.0] * nDecisions # set this also for savings rate, just in case it exists
         actUpper[:nDecisionTimes*nDecisionTechs] = [info['limMiuUpper'][np.mod(i,nDecisionTimes)] for i in list(range(nDecisionTimes*nDecisionTechs))]
@@ -885,7 +964,7 @@ class DICE_instance:
         actLower = [0] * nDecisions
         actLower[:nDecisionTimes*nDecisionTechs] = [info['limMiuLower'][np.mod(i,nDecisionTimes)] for i in list(range(nDecisionTimes*nDecisionTechs))]
 
-        act0 = np.array(actUpper)*0.5/nTechs # Start assuming each technology contributes equally to half of max
+        act0 = 0.5*(np.array(actUpper)+np.array(actLower))/nTechs # Start assuming each technology contributes equally to half of max
         for idx in list(range(nDecisionTimes)):  # make first element of deployment be sum and unpack in
             act0[idx] = np.sum(act0[idx:idx+nDecisionTechs*nDecisionTimes:nDecisionTimes])
 

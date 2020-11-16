@@ -22,7 +22,7 @@ from DICE_diffeqs import DICE_instance
 
 if __name__ == "__main__":
 
-        caseName = 'test1_100k'
+        caseName = 'testNS_100k'
 
         # If no arg is given, run vanilla DICE
 
@@ -50,10 +50,11 @@ if __name__ == "__main__":
             techLearningCurve = [False, True], # does this technology have a learning curve (True) or a specified cost function (False)
             # NOTE: <learningCurveTech> must have a length of <nTechs>
 
-            techLearningSubsidy = [False, True],  # whether to allow learning curve subsidies or require deploying only to highest
+            techLearningSubsidy = [False, False],  # whether to allow learning curve subsidies or require deploying only to highest
                                                   # marginal cost of other technologies.
 
-            techInitCost = [550, 1e4], # Initial cost for learning curve. Must be same shape as nTechs.
+            techInitCost = [550, 2000], # Initial cost for learning curve. Must be same shape as nTechs.
+            #techInitCost = [550, 1e4], # Initial cost for learning curve. Must be same shape as nTechs.
                                                 # If no learning curve, then this value is the initial backstop cost (pback)
 
             techInitAmount = [0, 1e4], # Initial cost for learning curve. Must be same shape as nTechs, but value if no learning curve is unimportant 
@@ -70,7 +71,7 @@ if __name__ == "__main__":
             parallel = 15, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             #parallel = 1, # number of cores to use, 0 or 1 is single core; Serial: 0 or 1, Parallel: 2,3,4,5,6,7,8...
             
-            maxeval = 100000,  # maxeval maximum number of iterations for solver
+            maxeval = 10000,  # maxeval maximum number of iterations for solver
             #maxeval =  100,  # maxeval maximum number of iterations for solver
 
             FOCUS  = 100, # FOCUS parameter for midaco solver
