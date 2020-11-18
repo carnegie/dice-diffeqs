@@ -59,8 +59,8 @@ def write_CSV_from_pickle( output_path, file):
                 # array
                 for idx in range(item.shape[1]):  # loop over columns
                     f.write("%s,%s\n"%(key+'_'+str(idx),re.sub("\ \ +"," ",str(list(item[:,idx]))[1:-1].replace("\n","")).replace(" ",",").replace(",,",",").replace(",,",","))) 
-            else:
-                print ('not exported = ',key," ",item.shape)
+            #else:
+                #print ('not exported = ',key," ",item.shape)
             # f.write("%s,%s\n"%(key,info[key]))
         f.write("%s,%s\n" %('act',str(act)[1:-1]))
         # f.write("%s,%s\n" %('act',act))

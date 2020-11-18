@@ -146,8 +146,8 @@ def initStateInfo(kwargs):
         else:
             info['limMiuLower'] = len(info['decisionTimes'])*[kwargs['limMiuLower']]
     else:
-        info['limMiuLower'] = len(info['decisionTimes'])*[0]  
-    info['limMiuLowerInterp'] =  np.interp(tlist,info['decisionTimes'],info['limMiuLower'])
+        info['limMiuLower'] = len(info['decisionTimes'])*[0]
+    info['limMiuLower'] = np.array(info['limMiuLower'] , dtype = float) 
 
     if 'limMiuUpper' in kwargs.keys():
         if isinstance(kwargs['limMiuUpper'], list):
@@ -156,7 +156,7 @@ def initStateInfo(kwargs):
             info['limMiuUpper'] = len(info['decisionTimes'])*[kwargs['limMiuUpper']]
     else:
         info['limMiuUpper'] = len(info['decisionTimes'])*[1.2]  # DICE default
-    info['limMiuUpperInterp'] =  np.interp(tlist,info['decisionTimes'],info['limMiuUpper'])
+    info['limMiuUpper'] = np.array(info['limMiuUpper'] , dtype = float) 
 
     # optimize on savings rate?
 
@@ -183,6 +183,8 @@ def initStateInfo(kwargs):
      # Note: Learning curve subsidies do not apply to technologies without learning curves
      # A False value for this option functions as expected only if there is at least one technology present without a learning curve.
 
+     # This doesn't really work because the system just responds with less of a subsidy.
+
     if 'techLearningSubsidy' in kwargs.keys():
         info['techLearningSubsidy'] = kwargs['techLearningSubsidy']
     else:
@@ -192,12 +194,15 @@ def initStateInfo(kwargs):
     # basic concept is that learning curve with no special subsidy gets to match the lowest price.
     # only works if other things are in the market. 
     
+    decisionTechs = nTechs*[True]
     nDecisionTechs = 0
     for idxTech in list(range(nTechs)):
-        if not ( not info['techLearningSubsidy'][idxTech] and info['techLearningCurve'][idxTech]):
+        if not info['techLearningSubsidy'][idxTech] and info['techLearningCurve'][idxTech]:
+            decisionTechs[idxTech] = False
+        else:
             nDecisionTechs += 1
+    info['decisionTechs'] = decisionTechs  # Default values always aimed to get as close as possible to default DICE   
     info['nDecisionTechs'] = nDecisionTechs  # Default values always aimed to get as close as possible to default DICE   
-  
      #-----> techInitCost
 
     if 'techInitCost' in kwargs.keys():
@@ -485,9 +490,11 @@ def initStateInfo(kwargs):
     info['outgoingLW'] = timeShape.copy() 
 
     info['miu'] = timeShape.copy() 
+    info['miuTech'] = timeTechShape.copy()
     
     return state,info
 
+#%%
 
 def dstatedt(state, info):
 
@@ -518,7 +525,8 @@ def dstatedt(state, info):
 
     # these get created because they get updated
     miu = info['miu']
-    miuTech = info['miuTech']
+    miuTech = info['miuTech'] # These are each technologies (including non decision technologies), summing to miu
+    miuRatios = info['miuRatios']  # This is ratio of decision technologies to each other, summing to one
     yGross = info['yGross']
     eGross = info['eGross']
     pBackTime = info['pBackTime']
@@ -571,8 +579,6 @@ def dstatedt(state, info):
     eGross[idxTime] = yGross[idxTime] * info['sigma'][idxTime] # what industrial emissions would be in the absence of abatement
 
     #-------------------------------------------------------------------------------------------------
-    #-------  Stuff related to abatement cost comes next  --------------------------------------------
-    #-------------------------------------------------------------------------------------------------
     # compute pBackTime
 
     for idxTech in list(range(nTechs)):
@@ -589,33 +595,67 @@ def dstatedt(state, info):
                 (1 - info['techLearningRate'][idxTech])**(idxTime*info['dt']) 
             )
 
-    # marginal cost of abatement is assumed to be the minimum of the above values    for idxTech in list(range(nTechs)):
+    #-------------------------------------------------------------------------------------------------
+    #-------  Now we go through the logic of distributing miu values ----------------------------------
 
-    mcAbate[idxTime] = 1.e20
-    for idxTech in list(range(nTechs)):
-        if techLearningSubsidy[idxTech] or not techLearningCurve[idxTech]:
-            mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* max(epsilon,miuTech[idxTime,idxTech])**(expcost2 - 1.0))
-            mcAbate[idxTime] = min(mcAbate[idxTime],mcAbateTech[idxTime,idxTech]) 
+    # The logic is this: The miu values are specified for everything except for the technologies
+    # that take the prevailing lowest price from the other technologies
+ 
+    # First do all of the technologies for which miuRatio is specified. If there or no price-takers
+    # then we are done. Otherwise we need to see if any of the price takers will take the prevailing price.
+    # If not, we are done.
 
-    # --------- handle learning curve with no learning subsidy as a special case after these cases are done
-    #------------ now handle no subsidy learning curve case
-    for idxTech in list(range(nTechs)):
-        if  not techLearningSubsidy[idxTech] and techLearningCurve[idxTech]:
+    # If there are price takers, we need to reduce the original miu amount by the approporiate amount and then
+    # keep cycling until there is convergence.
 
-            if mcAbate[idxTime] > firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech] and pBackTime[idxTime,idxTech] > 0:
-                miuTech[idxTime,idxTech] = ((mcAbate[idxTime] - firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech])/
-                                            ((1. - firstUnitFractionalCost[idxTech])*pBackTime[idxTime,idxTech]))**(1./(-1. + expcost2))
-                mcAbateTech[idxTime,idxTech] = mcAbate[idxTime]
+    # The point is that the ratios between the choice technologies are the same but their total amounts get reduced
+    # to allow for the price taking technologies.
+
+
+    done = False
+
+    idxLoop = 0
+    while not done:
+        done = True
+        mcAbate[idxTime] = 1.e20
+
+        for idxTech in list(range(nTechs)):
+            if info['decisionTechs'][idxTech]:  # note, in this case, by this time, miuRatios[idxTime,idxTech] >= 0.0: 
+                miuTech[idxTime,idxTech] = miu[idxTime] * miuRatios[idxTime,idxTech]
+                mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* max(epsilon,miuTech[idxTime,idxTech])**(expcost2 - 1.0))
+                mcAbate[idxTime] = min(mcAbate[idxTime],mcAbateTech[idxTime,idxTech]) 
             else:
-                miuTech[idxTime,idxTech] =  0.0 # This case doesn't really make sense. If pBackTime == 0 , it can't hope to equal marginal cost of pBackTime0   
-                mcAbateTech[idxTime,idxTech] =  pBackTime[idxTime,idxTech]*firstUnitFractionalCost[idxTech]  
+                miuTech[idxTime,idxTech] = -1
 
+        # --------- handle learning curve with no learning subsidy as a special case after these cases are done
+        #------------ now handle no subsidy learning curve case
+        for idxTech in list(range(nTechs)):
+            if  not info['decisionTechs'][idxTech]:
+            #if  not techLearningSubsidy[idxTech] and techLearningCurve[idxTech]:
+                if mcAbate[idxTime] > firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech] and pBackTime[idxTime,idxTech] > 0:
+                    miuTech[idxTime,idxTech] = ((mcAbate[idxTime] - firstUnitFractionalCost[idxTech]*pBackTime[idxTime,idxTech])/
+                                                ((1. - firstUnitFractionalCost[idxTech])*pBackTime[idxTime,idxTech]))**(1./(-1. + expcost2))
+                    mcAbateTech[idxTime,idxTech] = mcAbate[idxTime]
+                    done = False # not sure it is not done, but this is a good try
+                else:
+                    miuTech[idxTime,idxTech] =  0.0 # This case doesn't really make sense. If pBackTime == 0 , it can't hope to equal marginal cost of pBackTime0   
+                    mcAbateTech[idxTime,idxTech] =  pBackTime[idxTime,idxTech]*firstUnitFractionalCost[idxTech] 
 
-    miu[idxTime] = 0.0
+        if not done:
+            tol = 1e-12
+            miuTot = np.sum(miuTech[idxTime]) 
+            if abs(miu[idxTime] - miuTot) < tol:
+                done = True
+                miuRatios[idxTime] = miuRatios[idxTime] * miu[idxTime]/max(1.e-20,miuTot) # still helpful to do the last correction. make it sum to 1
+            else:
+                miuRatios[idxTime] = miuRatios[idxTime] * miu[idxTime]/max(1.e-20,miuTot)
+
+        idxLoop += 1
+        if idxLoop > 20:
+            print ('exiting Loop on count ',idxLoop,idxTime,miu[idxTIme],miuTot)
 
     abateCost[idxTime] = 0.0
     for idxTech in list(range(nTechs)):
-        miu[idxTime] += miuTech[idxTime,idxTech] 
             
         abateCostTech[idxTime,idxTech] = (
             eGross[idxTime] *  pBackTime[idxTime,idxTech] * 
@@ -627,10 +667,7 @@ def dstatedt(state, info):
         abateAmount[idxTime] += abateAmountTech[idxTime,idxTech] 
 
     # Industrial CO2 emission at t (tCO2)
-    if miu[idxTime] <=  info['limMiuUpperInterp'][idxTime]:
-        eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] # industrial emissions
-    else:
-        eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] * info['limMiuUpperInterp'][idxTime] / miu[idxTime] # industrial emissions
+    eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] # industrial emissions
 
     # Forest-related CO2 emissions
     # Total CO2 emission at t (tCO2)
@@ -725,20 +762,7 @@ def dstatedt(state, info):
 
     return dstate
 
-def dictAddEach(x, x0):
-    for key in x0:
-        if key in x:
-            x[key] = x[key] + x0[key]
-        else:
-            x[key]= x0[key]
-     
-
-def dictAddEachMultiply(x, x0, x1):
-    for key in x0:
-        if key in x:
-            x[key] = x[key] + x1 * x0[key]
-        else:
-            x[key]= x0[key]
+#%%
 
 def interpStep(t, timePoints, dataPoints):
     # returns the value of the dataPoint with a time value 
@@ -752,24 +776,32 @@ def interpStep(t, timePoints, dataPoints):
         res = dataPoints[idx]
     return res
 
-
+#%%
 
 def DICE_fun(act,state,info):
+    #  This is the function called by <wrapper>, called by the midaco solver
+
+    # It contains the actions that the solver is solving for, the initial state of the system, and general system info.
+    # (Initial state of the system could also be stored in info [as a future modification].)
+
+    # This function does two different things:
+
+    # It takes the decision variables in a form that is convenient for the solver (i.e., lists for real decisions only), and converts it
+    # into a form that is convenient for the differential equations (i.e., lists by time steps)
+
+    # The steps of this function are:
+
+    # 1. Expand <act> for decisions to decision times made implicit by constraints or specification.
+
+    # 2. Interpolate decision times to time steps.
+    # #     (This was brought outside the time loop, because repeated interpolation was causing things to run slowly.)
+
+    # 3. Time step through differential equations.
+
+
     # Initially we are going to assume that the only decision are the abatement
     # level MIU.
     # relies on globals <state> and <info>
-
-    # NOTE: decisions is first the various miu values, then rsav if present
-
-    """
-    state = copy.deepcopy(state)  # seems like this could be made more efficient by only making copies of the parts that need copies
-    info = copy.deepcopy(info)  # seems like this could be made more efficient by only making copies of the parts that need copies
-    info = copy.deepcopy(info)  # seems like this could be made more efficient by only making copies of the parts that need copies
-
-    state = state  # seems like this could be made more efficient by only making copies of the parts that need copies
-    info = info  # seems like this could be made more efficient by only making copies of the parts that need copies
-    info = info  # seems like this could be made more efficient by only making copies of the parts that need copies
-    """
 
     nDecisionTimes = len(info['decisionTimes'])
     nSavingDecisionTimes = len(info['savingDecisionTimes'])
@@ -779,26 +811,76 @@ def DICE_fun(act,state,info):
     dt = info['dt']
     nTimeSteps = info['nTimeSteps']
 
-    for 
+    limMiuUpper = info['limMiuUpper']
+    limMiuLower =info['limMiuLower']
 
-      # undo effort of making first decision be sum.
-    for idx in list(range(nDecisionTimes)):  # make first element of deployment be sum and unpack in
-        decisions[idx] = decisions[idx] - np.sum(decisions[idx+nDecisionTimes:idx+nDecisionTechs*nDecisionTimes:nDecisionTimes])
-    info['decisions'] = decisions
+    # ------------------------------------------------------------------------
+    # 1. unpack act
+    # ------------------------------------------------------------------------
+   
+    # -----> initialize miu decisions
 
-    miuTech = np.zeros((nTimeSteps,nTechs))
+    nMiuDecisions = np.count_nonzero(limMiuUpper - limMiuLower)  # This expression counts the number of different values
+
+    miuDecisions = (np.array(limMiuUpper) + np.array(limMiuLower))/2. # if limMiuUpper == limMiuLower, set action to this value      
+    icount = 0
+    for idx in range(nDecisionTimes):
+        if limMiuUpper[idx] > limMiuLower[idx]:
+            miuDecisions[idx] = act[icount]
+            icount += 1
+    info['miuDecisions'] = miuDecisions
+    # -----> initialize miuRatio decisions
+
+    sequentialDecisions = np.reshape(act[icount:icount+nDecisionTimes * (nDecisionTechs-1)],(nDecisionTechs-1,nDecisionTimes)) 
+    miuRatioDecisions = -np.ones(((nDecisionTimes,nTechs)))
+    remaining = np.ones(nDecisionTimes)
     idxTechDecision = 0
     for idxTech in list(range(nTechs)):
-        if not ( not info['techLearningSubsidy'][idxTech] and info['techLearningCurve'][idxTech] ):
-            miuTech[:,idxTech] = np.interp(tlist,info['decisionTimes'],decisions[idxTechDecision*nDecisionTimes:(idxTechDecision+1)*nDecisionTimes])
-            idxTechDecision += 1
-        else:
-            miuTech[:,idxTech] = 0
-    info['miuTech'] = miuTech
+        if info['decisionTechs'][idxTech]:
+        # if not ( not info['techLearningSubsidy'][idxTech] and info['techLearningCurve'][idxTech] ):
+            if idxTechDecision < len(sequentialDecisions):
+                miuRatioDecisions[:,idxTech] = remaining * sequentialDecisions[idxTechDecision]
+                remaining = remaining * (1.0 - sequentialDecisions[idxTechDecision])
+                idxTechDecision += 1
+            else: # last one gets remaining
+                miuRatioDecisions[:,idxTech] = remaining
+
+    # -----> initialize savings decisions
 
     if info['optSavings']:
-        info['savings'] = np.interp(tlist,info['savingDecisionTimes'],decisions[-nSavingDecisionTimes:])
+        savings = np.array(act[-nSavingDecisionTimes:])
+    else: # specified savings
+        savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
+
+    # ------------------------------------------------------------------------
+    # 2. now interpolate across time steps
+    # ------------------------------------------------------------------------   
+
+    #  for miuratios, change from cumulative to actual ratios.
+    #  i.e., on input if miu  = 0.8, and miuRatio = [0.25, 0.333333, 0.5]
+    # we would have on cumulative (0.25 x 0.8) = 0.2; 0.8 - 0.2 = 0.6; (0.3333 * 0.6 ) = 0.2; ... 
+    # or in terms of 
+    # This would be converted to, miu = 0.8 and miuRatios = [0.25, 0.25, 0.25, 0.25]
+
+    miu =  np.interp(tlist,info['decisionTimes'],miuDecisions)
+    info['miu'] = miu
+
+    miuRatios = np.zeros((nTimeSteps,nTechs))
+    miuRemaining = np.ones(nTimeSteps)
+    timeNull = -np.ones(nTimeSteps)
+    for idxTech in list(range(nTechs)):
+        if info['decisionTechs'][idxTech]:
+            miuRatios[:,idxTech] = np.interp(tlist,info['decisionTimes'],miuRatioDecisions[:,idxTech])
+        else:
+            miuRatios[:,idxTech] = timeNull  # -1 means no miuRatio value for this technology
+    info['miuRatios'] = miuRatios
+
+    info['savings'] = np.interp(tlist,info['savingDecisionTimes'],savings)
     
+    # ------------------------------------------------------------------------
+    # 3. now time step the action
+    # ------------------------------------------------------------------------  
+
     for idxTime in list(range(info['nTimeSteps'])):
         info['idxTime'] = idxTime
          
@@ -808,11 +890,6 @@ def DICE_fun(act,state,info):
         for key in state:
             state[key] +=  dt * dstate[key]
 
-    #print (1.e-9*float(np.sum(info['cemutotper'])))
-    #print('decisions')
-    #print(decisions) 
-    #print('info[miuTech]')
-    #print(info['miuTech']) 
 
     return float(np.sum(info['cemutotper'])),info
 
@@ -838,101 +915,25 @@ class DICE_instance:
 
         welfare, info = DICE_fun(act,state,info)
 
-        # keep the sum of the mius of all of the technologies within the time dependent bounds.
-        # #  Inequality constraints G(X) >= 0 
-        miuDecisions = info['miu'][info['decisionTimes']]
-        #gConstraints = list(miuDecisions - info['limMiuLower']) + list(info['limMiuUpper'] - miuDecisions)
-        gConstraints = list(miuDecisions - info['limMiuLower'])  # upper bound constraint is now applied in diffeqs
-
         # "Without loss of generality, all objectives are subject to minimization."
         # http://www.midaco-solver.com/data/other/MIDACO_User_Manual.pdf
 
-        #print( 'info[miu]')
-        #print( info['miu']  )
-        ##print( 'miuDecisions')
-        #print( miuDecisions  )
-        #print( 'act')
-        #print( act)
-        #print('result')
-        #print ( [[-welfare],list(gConstraints)])
 
-        return [[-welfare],gConstraints]
-
-    def compressDecision(decisions,info):
-        # compress out miu decision when max and min values are constrained to be the same thing
-
-        nDecisionTimes = len(info['decisionTimes'])
-
-        limMiuUpper = info['limMiuUpper']
-        limMiuLower =info['limMiuLower']
-
-        nMiuDecisions = np.count_zero(limMiuUpper != limMiuLower)
-
-        if nMiuDecisions == nDecisionTims:
-
-            act = decisions
-
-        else: # some time periods are constrained
-
-            miuDecisions = np.zeros(nMiuDecisions) # create empty vector        
-            icount = 0
-            for idx in range(nDecisions):
-                if limMiuUpper[idx] > limMiuLower[idx]:
-                    miuDecisions[icount] = act[idx]
-                    icount += 1
-            decisions = np.concatenate(miuDecisions,act[nDecisionTimes:])
-        
-        return decisions
-
-    def decompressDecision(act,info):
-        # compress out miu decision when max and min values are constrained to be the same thing
-        decisionTimes = info['decisionTimes']
-        savingDecisionTimes = info['savingDecisionTimes']
-
-        nDecisionTimes = len(info['decisionTimes'])
-        nSavingDecisionTimes = len(info['savingDecisionTimes'])
-
-        nTechs =  info['nTechs'] # total number of technologies in resuls
-        nDecisionTechs = info['nDecisionTechs']
-
-        limMiuUpper = info['limMiuUpper']
-        limMiuLower =info['limMiuLower']
-
-        if info['optSavings']:
-            nDecisions = nDecisionTimes * nDecisionTechs + nSavingDecisionTimes
-        else:
-            nDecisions = nDecisionTimes * nDecisionTechs
-
-        nMiuDecisions = np.count_zero(limMiuUpper != limMiuLower)
-
-        if nMiuDecisions == nDecisions:
-            decisions = act
-        else: # some time periods are constrained
-            miuDecisions = np.zeros(nMiuDecisions) # create empty vector
-        
-            icount = 0
-            for idx in range(nDecisions):
-                if limMiuUpper[idx] > limMiuLower[idx]:
-                    miuDecisions[icount] = act[idx]
-                    icount += 1
-
-            decisions = np.concatenate(miuDecisions,act[nDecisionTimes:])
-        
-        return decisions
-
-
-        
-
-        
-    
-
-
+        return [[-welfare],[0.0]]
 
     def runDICEeq(self):
 
         state = self.state
         info = self.info
         
+        # There are three types of actions:
+
+        # miu[reducedDecisionTimeSteps] -- actions to decide on overall abatement level (miu)
+        
+        # miuRatio[idx, decisionTimeSteps] (for idx all but last technology with a decision)
+
+        # savings rate
+
         decisionTimes = info['decisionTimes']
         savingDecisionTimes = info['savingDecisionTimes']
 
@@ -942,11 +943,49 @@ class DICE_instance:
         nTechs =  info['nTechs'] # total number of technologies in resuls
         nDecisionTechs = info['nDecisionTechs']
 
+        limMiuUpper = info['limMiuUpper']
+        limMiuLower = info['limMiuLower']
+
+        # -----> initialize miu decisions
+
+        nMiuDecisions = np.count_nonzero(limMiuUpper - limMiuLower) # This expression counts the number of different values
+
+        miuDecisions = np.zeros(nMiuDecisions) # create empty vector        
+        miuLower = np.zeros(nMiuDecisions) # create empty vector        
+        miuUpper = np.zeros(nMiuDecisions) # create empty vector        
+        icount = 0
+        for idx in range(nDecisionTimes):
+            if limMiuUpper[idx] > limMiuLower[idx]:
+                miuLower[icount] = limMiuLower[idx]
+                miuUpper[icount] = limMiuUpper[idx]
+                miuDecisions[icount] = ( miuLower[icount] + miuUpper[icount] )/2.
+                miuLower[icount]
+                icount += 1
+
+        # -----> initialize miuRatio decisions
+
+        miuRatioDecisions = np.ones((nDecisionTimes,nDecisionTechs-1))/nTechs # start of assume all techs are created equal      
+        miuRatioLower = np.zeros((nDecisionTimes,nDecisionTechs-1)) # create array of zeros        
+        miuRatioUpper = np.ones((nDecisionTimes,nDecisionTechs-1)) # create array of ones 
+
+        # -----> initialize savings decisions
+
         if info['optSavings']:
-            nDecisions = nDecisionTimes * nDecisionTechs + nSavingDecisionTimes
-        else:
-            nDecisions = nDecisionTimes * nDecisionTechs
-    
+            savingsUpper = np.ones( nSavingDecisionTimes )
+            savingsLower = np.zeros(nSavingDecisionTimes)
+            savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
+            savings[-1] = 0.0 # assume last time period is zero
+        else: # no savings
+            savingsUpper = np.zeros(0)
+            savingsLower = np.zeros(0)
+            savings = np.zeros(0)
+
+        # ----> put together actions
+
+        act = np.concatenate((miuDecisions,np.ravel(miuRatioDecisions),savings))
+        actUpper = np.concatenate((miuUpper,np.ravel(miuRatioUpper),savingsUpper))
+        actLower = np.concatenate((miuLower,np.ravel(miuRatioLower),savingsLower))
+
         ########################################################################
         ### Step 1: Problem definition     #####################################
         ########################################################################
@@ -957,21 +996,6 @@ class DICE_instance:
         # In the code it makes sense to have miu[idxTech] for each tech. But numerically, it is better to have the sum of all miu's as the first variable
         # and then the fraction of the sum of miu's used by the first, second, nth technology.
         # the last technology with a decision gets the remainder.
-        
-        actUpper = [1.0] * nDecisions # set this also for savings rate, just in case it exists
-        actUpper[:nDecisionTimes*nDecisionTechs] = [info['limMiuUpper'][np.mod(i,nDecisionTimes)] for i in list(range(nDecisionTimes*nDecisionTechs))]
-
-        actLower = [0] * nDecisions
-        actLower[:nDecisionTimes*nDecisionTechs] = [info['limMiuLower'][np.mod(i,nDecisionTimes)] for i in list(range(nDecisionTimes*nDecisionTechs))]
-
-        act0 = 0.5*(np.array(actUpper)+np.array(actLower))/nTechs # Start assuming each technology contributes equally to half of max
-        for idx in list(range(nDecisionTimes)):  # make first element of deployment be sum and unpack in
-            act0[idx] = np.sum(act0[idx:idx+nDecisionTechs*nDecisionTimes:nDecisionTimes])
-
-        if info['optSavings']:
-            actUpper[-nSavingDecisionTimes:] =  [1.0] * nSavingDecisionTimes
-            act0[-nSavingDecisionTimes:] = [info['optlrsav'] for i in info['savingDecisionTimes']]
-            act0[-1] = 0.0 # assume last time period is zero
 
         ########################################################################
         ### Step 1: Problem definition     #####################################
@@ -989,7 +1013,7 @@ class DICE_instance:
         ##############################
 
     
-        problem['x'] = list(act0)  # initial guess for control variable, convert to list
+        problem['x'] = list(act)  # initial guess for control variable, convert to list
 
         #actupper[30:] = [info['limmiu']] * (nDecisions-30)
     
@@ -999,9 +1023,9 @@ class DICE_instance:
         # STEP 1.A: Problem dimensions
         ##############################
         problem['o']  = 1                       # Number of objectives 
-        problem['n']  = int(nDecisions) # Number of variables (in total)
+        problem['n']  = len(act) # Number of variables (in total)
         problem['ni'] = 0                       # Number of integer variables (0 <= ni <= n) 
-        problem['m']  = nDecisionTimes      # Number of constraints (in total)  [max and min on miu for each time step]
+        problem['m']  = 0      # Number of constraints (in total)  [max and min on miu for each time step]
         problem['me'] = 0                       # Number of equality constraints (0 <= me <= m)
         
         ########################################################################
@@ -1079,3 +1103,5 @@ class DICE_instance:
         root_dir = "."
 
         return [problem,option,solution,info]
+
+# %%
