@@ -700,7 +700,7 @@ def dstatedt(state, info):
         periodu[idxTime] = (max(0.001* cpc[idxTime],epsilon)**(1 - info['elasmu']) - 1)/(1 - info['elasmu']) - 1 # Vanilla Dice
         # This ugly scaling by 0.001 is intended to keep utility numbers the same as what Nordhaus had
     else:  # utilityOption == 1 --> optimize on consumption
-        periodu[idxTime] = max(cpc[idxTime],epsilon)
+        periodu[idxTime] = max(c[idxTime],epsilon)
 
     # Period utility
     cemutotper[idxTime] = periodu[idxTime] *info['L'][idxTime]  * info['rr'][idxTime] 
