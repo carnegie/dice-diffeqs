@@ -919,7 +919,7 @@ class DICE_instance:
         # http://www.midaco-solver.com/data/other/MIDACO_User_Manual.pdf
 
 
-        return [[-welfare],[0.0]]
+        return [[-welfare*1e-15],[0.0]]
 
     def runDICEeq(self):
 
