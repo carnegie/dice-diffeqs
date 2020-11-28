@@ -7,6 +7,8 @@ Created on Fri Mar  8 11:50:02 2019
 import os
 import pickle
 import types
+import re
+import numpy as np
 
 #%%
 def pickle_results ( output_path, file_name, data ):
@@ -43,12 +45,22 @@ def unpickle_results ( output_path, file_name ):
 def write_CSV_from_pickle( output_path, file):
     LC = unpickle_results( output_path,  file)
     act = LC[2]['x']
-    info = LC[4]
+    info = LC[3]
     #year = np.arange(2015, 2015+global_params['T']*global_params['tstep'], global_params['tstep'])
 
     with open(output_path + '/' + file + '.csv', 'w') as f:
         for key in info.keys():
-            f.write("%s,%s\n"%(key,str(info[key])[1:-1]))
+            item = np.array(info[key])
+            # don't print scalars
+            if 1 == len(item.shape):
+                # vector
+                f.write("%s,%s\n"%(key,re.sub("\ \ +"," ",str(list(info[key]))[1:-1].replace("\n","")).replace(" ",",").replace(",,",",").replace(",,",",")))
+            elif 2 == len(item.shape):
+                # array
+                for idx in range(item.shape[1]):  # loop over columns
+                    f.write("%s,%s\n"%(key+'_'+str(idx),re.sub("\ \ +"," ",str(list(item[:,idx]))[1:-1].replace("\n","")).replace(" ",",").replace(",,",",").replace(",,",","))) 
+            #else:
+                #print ('not exported = ',key," ",item.shape)
             # f.write("%s,%s\n"%(key,info[key]))
         f.write("%s,%s\n" %('act',str(act)[1:-1]))
         # f.write("%s,%s\n" %('act',act))
