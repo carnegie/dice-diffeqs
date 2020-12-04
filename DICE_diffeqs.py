@@ -890,7 +890,6 @@ def DICE_fun(act,state,info):
         for key in state:
             state[key] +=  dt * dstate[key]
 
-
     return float(np.sum(info['cemutotper'])),info
 
 #############################################################################
@@ -919,7 +918,7 @@ class DICE_instance:
         # http://www.midaco-solver.com/data/other/MIDACO_User_Manual.pdf
 
 
-        return [[-welfare*1e-15],[0.0]]
+        return [[-welfare*1e-24],[0.0]]
 
     def runDICEeq(self):
 
@@ -1048,7 +1047,7 @@ class DICE_instance:
         ### Step 3: Choose MIDACO parameters (FOR ADVANCED USERS)    ###########
         ########################################################################
     
-        option['param1']  = 1.0e-6  # ACCURACY  
+        option['param1']  = 0       # ACCURACY  (only affects constrained problems)
         option['param2']  = 1       # SEED (integer)
         option['param3']  = 0       # FSTOP (integer)
         option['param4']  = 100     # ALGOSTOP (integer) 
@@ -1099,7 +1098,7 @@ class DICE_instance:
         info["saveOutput"] = True
     
         utility,info = DICE_fun(solution['x'],state,info)
-        print(utility*1.e-12)
+        print(utility*1.e-24)
         root_dir = "."
 
         return [problem,option,solution,info]

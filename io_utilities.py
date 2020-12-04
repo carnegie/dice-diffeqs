@@ -6,6 +6,7 @@ Created on Fri Mar  8 11:50:02 2019
 """
 import os
 import pickle
+import json
 import types
 import re
 import numpy as np
@@ -48,7 +49,7 @@ def write_CSV_from_pickle( output_path, file):
     info = LC[3]
     #year = np.arange(2015, 2015+global_params['T']*global_params['tstep'], global_params['tstep'])
 
-    with open(output_path + '/' + file + '.csv', 'w') as f:
+    with open(output_path + '/' + file + '.CSV', 'w') as f:
         for key in info.keys():
             item = np.array(info[key])
             # don't print scalars
