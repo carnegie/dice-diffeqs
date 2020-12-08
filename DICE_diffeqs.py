@@ -295,31 +295,13 @@ def initStateInfo(kwargs):
     gama = 0.3 #     Capital elasticity in production function    info['/.300    /
     info['gama'] = gama
     info['depk'] = 0.1 #      Depreciation rate on capital (per year)          /.100    /
-    
-    if COINmode:
-        info['optlrsav'] = info['depk'] /(info['depk'] + info['prstp'])*info['gama']
-    else:
-        info['optlrsav'] = (info['depk'] + 0.004)/(info['depk'] + 0.004*info['elasmu'] + info['prstp'])*info['gama']
-    
-    if COINmode:
-        info['L']= [1]*nTimeSteps
-    else:
-        pop0 = 7403 * 1.e6 #  in people, not millions    Initial world population 2015 (millions)         /7403    /
-        info['pop0'] = pop0
-        info['popadj'] = 1- (1-0.134)**0.2  #  Assumption is original is per 5 year period;  Growth rate to calibrate to 2050 pop projection  /0.134   /
-        info['popasym'] =   11500 * 1.e6 # Asymptotic population (millions)                 /11500   /
-        #popList = []
-        #pop = pop0
-        #for t in np.arange(0.0,timeEnd+dt,dt):
-        #    popList.append(pop)
-        #    pop = pop * (popasym / pop)** popadj
-        #info['popList'] = popList
-        info['L'] = info['popasym']*(info['popasym']/info['pop0'])**-((1-info['popadj'])**tlist )
-    
+     
     state['cumETot'] = 0.0  # cumulative emissions (tCO2)
 
 
     if COINmode:
+        info['L']= [1]*nTimeSteps
+
         state['k']=1.0
         info['sigma'] = 1.01**-tlist # the units on sigma are relative to base case emissions
         #                              assumption is base case if sustained would warm 2 C in 100 years.
@@ -334,7 +316,7 @@ def initStateInfo(kwargs):
         #                        based on concept of 2 C warming in 100 years if sustained initial condition emissions
 
         info['a1'] = 0. #       Damage intercept                                 /0       /
-        info['a2'] = 0.01  #    Fraction of GDP per degree of warming squared
+        info['a2'] = 0.0025 #    Fraction of GDP per degree of warming squared
         info['a3'] = 2  #       Damage exponent                                  /2.00    /
 
         info['K0'] = 200.e12 # USD$ capital
@@ -342,7 +324,21 @@ def initStateInfo(kwargs):
         info['tau']=info['K0']/info['Y0'] # time constant relating reference state gross production 
         # q0 in vanilla DICE is 105.177 trillion USD.
 
+        info['optlrsav'] = info['gama'] * ( info['depk'] + dela ) / ( info['depk'] + info['prstp'] + info['prstp'] * dela )
+
     else:
+
+        pop0 = 7403 * 1.e6 #  in people, not millions    Initial world population 2015 (millions)         /7403    /
+        info['pop0'] = pop0
+        info['popadj'] = 1- (1-0.134)**0.2  #  Assumption is original is per 5 year period;  Growth rate to calibrate to 2050 pop projection  /0.134   /
+        info['popasym'] =   11500 * 1.e6 # Asymptotic population (millions)                 /11500   /
+        #popList = []
+        #pop = pop0
+        #for t in np.arange(0.0,timeEnd+dt,dt):
+        #    popList.append(pop)
+        #    pop = pop * (popasym / pop)** popadj
+        #info['popList'] = popList
+        info['L'] = info['popasym']*(info['popasym']/info['pop0'])**-((1-info['popadj'])**tlist )
 
         k0 = 223 * 1.e12 # in USD, not trillions USD      Initial capital value 2015 (trill 2010 USD)      /223     /
         state['k'] = k0
@@ -457,6 +453,9 @@ def initStateInfo(kwargs):
 
         #** Abatement cost
         info['expcost2'] = 2.6 #  Exponent of control cost function               / 2.6  /
+
+        info['optlrsav'] = (info['depk'] + 0.004)/(info['depk'] + 0.004*info['elasmu'] + info['prstp'])*info['gama']
+    
 
     #info['tnopol'] =    Period before which no emissions controls base  / 45   /
     #info['cprice0'] =   Initial base carbon price (2010$ per tCO2)      / 2    /

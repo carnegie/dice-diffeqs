@@ -33,7 +33,7 @@ if __name__ == "__main__":
         initCostList = [10000]
         rampOpts = ['welfare']
         rateOptDic = {"12pct":0.18442457113742744}
-        maxEval = 20000
+        maxEval = 100000
 
         #initCostList = [1.e4,9.e3,8.e3,7.e3,6.e3,5.e3,4.e3,3.e3,2.e3,1.5e3,1.e3,900,800,700,600,500,400,300,200,100,50,0,1.e20]
         #initCostList = [1e4,1e3,1e2]
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                         # note that the miu = 0 case is identical to the one technology miu = 0 case.
 
 
-                        caseName = 'checkCOIN_2P_'+rateOpt+"_"+str(initCost)+'_'+shiftOpt+'_'+rampOpt+'_'+str(maxEval)
+                        caseName = 'checkCOIN_2Kp25D_'+rateOpt+"_"+str(initCost)+'_'+shiftOpt+'_'+rampOpt+'_'+str(maxEval)
 
                         # If no arg is given, run vanilla DICE
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
                             damageCostRatio = 1.0, # scaling on climate damage
 
-                            abatementCostRatio = 2.0 # scaling on abatement costs (multiplies costs above for all techs)
+                            abatementCostRatio = 1.0 # scaling on abatement costs (multiplies costs above for all techs)
 
                         )
 
