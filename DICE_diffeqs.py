@@ -319,13 +319,14 @@ def initStateInfo(kwargs):
         info['a2'] = 0.0025 #    Fraction of GDP per degree of warming squared
         info['a3'] = 2  #       Damage exponent                                  /2.00    /
 
-        info['K0'] = 200.e12 # USD$ capital
+        info['K0'] = 300.e12 # USD$ capital
         info['Y0'] = 100.e12 # USD$/yr gross production
-        info['tau']=info['K0']/info['Y0'] # time constant relating reference state gross production 
-        # q0 in vanilla DICE is 105.177 trillion USD.
+         # q0 in vanilla DICE is 105.177 trillion USD.
 
-        info['optlrsav'] = info['gama'] * ( info['depk'] + dela ) / ( info['depk'] + info['prstp'] + info['prstp'] * dela )
+        info['optlrsav'] = info['gama'] * ( info['depk'] + dela ) / ( info['depk'] + info['prstp'] )
 
+        info['tau']= info['optlrsav']/info['depk'] #  = info['K0']/info['Y0'] # time constant relating reference state gross production 
+        print (info['tau'])
     else:
 
         pop0 = 7403 * 1.e6 #  in people, not millions    Initial world population 2015 (millions)         /7403    /
@@ -885,7 +886,8 @@ def DICE_fun(act,state,info):
             state[key] +=  dt * dstate[key]
 
     if COINmode:
-        obj = dt*np.sum(info['cemutotper'])+(state['k']*(1+info['prstp'])**(-(1+nTimeSteps)*dt)-1)/info['tau']
+        #obj = dt*np.sum(info['cemutotper'])+((state['k']-dt*dstate['k'])*(1+info['prstp'])**(-nTimeSteps*dt)-1)/info['tau']
+        obj = dt*np.sum(info['cemutotper'])
     else:
         obj = np.sum(info['cemutotper'])
 
@@ -1101,7 +1103,7 @@ class DICE_instance:
         info["saveOutput"] = True
     
         utility,info = DICE_fun(solution['x'],state,info)
-        print(utility*1.e-24)
+        print(utility)
         root_dir = "."
 
         return [problem,option,solution,info]
