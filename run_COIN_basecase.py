@@ -24,6 +24,7 @@ from DICE_diffeqs import DICE_instance
 if __name__ == "__main__":
 
         """
+        
         #initCostList = [10000,8000,6300,5000,4000,3200,2500,2000,1600,1300,1000,800,630,500,400,320,250,200,160,130,100,80,63,50,40,32,25,20,16,13,10]
         #initCostList = [8900,7100,5600,4500,3500,2800,2200,1800,1400,1100,890,710,560,450,350,280,220,180,140,110,89,71,56,45,35,28,22,18,14,11,7900,790,79]
         #initCostList = [28,22,18,14,11,7900,790,79]
@@ -69,7 +70,7 @@ if __name__ == "__main__":
                         # note that the miu = 0 case is identical to the one technology miu = 0 case.
 
 
-                        caseName = 'checkCOIN_noDamage_'+rateOpt+"_"+str(initCost)+'_'+shiftOpt+'_'+rampOpt+'_'+str(maxEval)
+                        caseName = 'checkCOIN_noDamage1_'+rateOpt+"_"+str(initCost)+'_'+shiftOpt+'_'+rampOpt+'_'+str(maxEval)
 
                         # If no arg is given, run vanilla DICE
 
@@ -152,7 +153,10 @@ if __name__ == "__main__":
         #shiftOpts = ["shift"]
         #initCostList = [1,0.8,0.6,0.4,0.2,0]
         initCostList = np.insert(np.round(10.**-np.arange(0,2.05,0.05),6),0,10)
-        rampOpts = ['welfare',"max","0by250"]
+        #initCostList = np.round(10.**-np.arange(1.05,2.05,0.05),6)
+        #initCostList = np.array([10])
+        #rampOpts = ['welfare',"max","0by2050"]
+        rampOpts = ['0by2050']
         #rateOptDic = {"20pct":0.2630344058337938,"15pct":0.1634987322828795,"12pct":0.15055967657538144,"10pct":0.13750352374993496}
         rateOptDic = {"10pct":0.13750352374993496}
         maxEval = 100000
@@ -180,8 +184,8 @@ if __name__ == "__main__":
 
                         for rampOpt in rampOpts:
                             if rampOpt == '0by2050':
-                                limLower = [0.,0.,0.16666666666666666, 0.3333333333333333, 0.5, 0.6666666666666666, 0.8333333333333334, 1.,   
-                                            1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.]
+                                limLower = [0.,0.16666666666666666, 0.3333333333333333, 0.5, 0.6666666666666666, 0.8333333333333334, 1.,   
+                                            1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.]
                                 limUpper = limLower
                             elif rampOpt == 'max':
                                 limLower = 1.0
@@ -205,7 +209,7 @@ if __name__ == "__main__":
 
                                 nTechs = 2, # number of technologies considered
 
-                                decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,110,120,140,160,200,240,260,280,300], # times for miu decisions
+                                decisionTimes =[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,170,200,240,260,280,300], # times for miu decisions
                                 # NOTE: <decisionTimes> are also the times assumed for specified limits on miu
 
                                 #limMiuLower = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], # lower limit on miu values (= sum across all techs)
@@ -260,4 +264,3 @@ if __name__ == "__main__":
                             pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resultCentral.out))
 
                             write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
-

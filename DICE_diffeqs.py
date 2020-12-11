@@ -325,7 +325,7 @@ def initStateInfo(kwargs):
 
         info['optlrsav'] = info['gama'] * ( info['depk'] + dela ) / ( info['depk'] + info['prstp'] )
 
-        info['tau']= info['optlrsav']/info['depk'] #  = info['K0']/info['Y0'] # time constant relating reference state gross production 
+        info['tau'] = info['gama']  / ( info['depk'] + info['prstp'] ) #  = info['K0']/info['Y0'] # time constant relating reference state gross production 
         print (info['tau'])
     else:
 
