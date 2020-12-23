@@ -76,6 +76,7 @@ import numpy as np
 import utils
 import copy
 from plot_utilities import *
+import scipy
 #import copy
 import os
 import sys
@@ -179,7 +180,12 @@ def initStateInfo(kwargs):
     if 'savingDecisionTimes' in kwargs.keys():
         info['savingDecisionTimes'] = kwargs['savingDecisionTimes']
     else:
-        info['savingDecisionTimes'] = decisionTimes
+        info['savingDecisionTimes'] = decisionTimes    # savings rate decision times?
+      
+    if 'splineDecisionTimes' in kwargs.keys():
+        info['splineDecisionTimes'] = kwargs['splineDecisionTimes']
+    else:
+        info['splineDecisionTimes'] = False
 
     #-----> techLearningCurve: Does the technology have a learning curve? 
 

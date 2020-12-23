@@ -147,16 +147,17 @@ if __name__ == "__main__":
         #initCostList = [10000,8000,6300,5000,4000,3200,2500,2000,1600,1300,1000,800,630,500,400,320,250,200,160,130,100,80,63,50,40,32,25,20,16,13,10]
         #initCostList = [8900,7100,5600,4500,3500,2800,2200,1800,1400,1100,890,710,560,450,350,280,220,180,140,110,89,71,56,45,35,28,22,18,14,11,7900,790,79]
         #initCostList = [28,22,18,14,11,7900,790,79]
-        #rampOpts = ['0by2050','welfare','max']
+        rampOpts = ['0by2050','welfare','max']
         #rampOpts = ['max']
         shiftOpts = ['shift','follow']
         #shiftOpts = ["shift"]
         #initCostList = [1,0.8,0.6,0.4,0.2,0]
-        initCostList = np.insert(np.round(10.**-np.arange(0,2.05,0.05),6),0,10)
-        #initCostList = np.round(10.**-np.arange(1.05,2.05,0.05),6)
+        initCostRef = 1 # base initCost
+        #initCostList = np.insert(np.round(10.**-np.arange(0,2.05,0.05),6),0,10)
+        initCostList = np.round(10.**-np.arange(1.3,2.05,0.05),6)
         #initCostList = np.array([10])
         #rampOpts = ['welfare',"max","0by2050"]
-        rampOpts = ['0by2050']
+        #rampOpts = ['0by2050']
         #rateOptDic = {"20pct":0.2630344058337938,"15pct":0.1634987322828795,"12pct":0.15055967657538144,"10pct":0.13750352374993496}
         rateOptDic = {"10pct":0.13750352374993496}
         maxEval = 100000
@@ -178,7 +179,7 @@ if __name__ == "__main__":
                             initAmount = initAmt
                         else:
                             if initCost > 0:
-                                initAmount = initAmt*(initCost/1.e4)**(-1./rateOptDic[rateOpt])
+                                initAmount = initAmt*(initCost/initCostRef)**(-1./rateOptDic[rateOpt])
                             else:
                                 initAmount = 1.e80
 
@@ -196,7 +197,7 @@ if __name__ == "__main__":
                             # note that the miu = 0 case is identical to the one technology miu = 0 case.
 
 
-                            caseName = 'COIN_000_'+rateOpt+"_"+str(initCost)+'_'+str(initAmt)+'_'+shiftOpt+'_'+rampOpt+'_'+str(maxEval)
+                            caseName = 'COIN_001_'+rateOpt+"_"+str(initCost)+'_'+str(initAmt)+'_'+shiftOpt+'_'+rampOpt+'_'+str(maxEval)
 
                             # If no arg is given, run vanilla DICE
 
@@ -223,7 +224,7 @@ if __name__ == "__main__":
 
                                 optSavings = True, # True means to optimize on savings rate, False means to use default value (different for COINmode)
 
-                                savingDecisionTimes =[0,20,40,60,80,100,140,200,260,280,300], # times for savings rate decisions
+                                savingDecisionTimes =[0,30,60,90,120,150,200,260,280,300], # times for miu decisions
 
                                 techLearningCurve = [False,True], # does this technology have a learning curve (True) or a specified cost function (False)
                                 # NOTE: <learningCurveTech> must have a length of <nTechs>
