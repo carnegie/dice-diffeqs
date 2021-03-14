@@ -76,7 +76,7 @@ import numpy as np
 import utils
 import copy
 from plot_utilities import *
-import scipy
+from scipy import interpolate
 #import copy
 import os
 import sys
@@ -175,7 +175,13 @@ def initStateInfo(kwargs):
         else:         
             info['optSavings'] = False
 
+    #----------------------------------------------------------------------------------------------
     # savings rate decision times?
+
+    if 'optSavingTimes' in kwargs.keys():
+        info['optSavingTimes'] = kwargs['optSavingTimes'] 
+    else:
+        info['optSavingTimes'] = False
       
     if 'savingDecisionTimes' in kwargs.keys():
         info['savingDecisionTimes'] = kwargs['savingDecisionTimes']
@@ -187,6 +193,7 @@ def initStateInfo(kwargs):
     else:
         info['splineDecisionTimes'] = False
 
+    #---------------------------------------------------------------------------------------------
     #-----> techLearningCurve: Does the technology have a learning curve? 
 
     if 'techLearningCurve' in kwargs.keys():
@@ -302,7 +309,10 @@ def initStateInfo(kwargs):
     info['gama'] = gama
     info['depk'] = 0.1 #      Depreciation rate on capital (per year)          /.100    /
      
-    state['cumETot'] = 0.0  # cumulative emissions (tCO2)
+    if 'cumETotInit' in kwargs.keys():
+        state['cumETot'] = kwargs['cumETotInit'] # units of init emission equivalents 
+    else:
+        state['cumETot'] = 0.0  # cumulative emissions (tCO2)
 
 
     if COINmode:
@@ -322,7 +332,7 @@ def initStateInfo(kwargs):
         #                        based on concept of 2 C warming in 100 years if sustained initial condition emissions
 
         info['a1'] = 0. #       Damage intercept                                 /0       /
-        info['a2'] = 0.0025 #    Fraction of GDP per degree of warming squared
+        info['a2'] = 0.005 #    Fraction of GDP per degree of warming squared 9@% damages at 2 C temp increase
         info['a3'] = 2  #       Damage exponent                                  /2.00    /
 
         info['K0'] = 300.e12 # USD$ capital
@@ -332,7 +342,7 @@ def initStateInfo(kwargs):
         info['optlrsav'] = info['gama'] * ( info['depk'] + dela ) / ( info['depk'] + info['prstp'] )
 
         info['tau'] = info['gama']  / ( info['depk'] + info['prstp'] ) #  = info['K0']/info['Y0'] # time constant relating reference state gross production 
-        print (info['tau'])
+        print (info['optlrsav'],info['tau'])
     else:
 
         pop0 = 7403 * 1.e6 #  in people, not millions    Initial world population 2015 (millions)         /7403    /
@@ -613,12 +623,6 @@ def dstatedt(state, info):
     dml = info['dml']
     cumAbateTech = info['cumAbateTech']
 
-    #-------------------------------------------------------------------------
-    # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
-    yGross[idxTime] = (info['al'][idxTime]  * info['L'][idxTime] **(1 - info['gama'])) * (max(state['k'],epsilon)**info['gama'])
-
-    eGross[idxTime] = yGross[idxTime] * info['sigma'][idxTime] # what industrial emissions would be in the absence of abatement
-
     #-------------------------------------------------------------------------------------------------
     # compute pBackTime
 
@@ -639,6 +643,22 @@ def dstatedt(state, info):
     #-------------------------------------------------------------------------------------------------
     #-------  Now we go through the logic of distributing miu values ----------------------------------
 
+    #-------------------------------------------------------------------------
+
+    # Climate damage cost at t
+    tAtmDamage = max(0.0, tAtmState)  # do not consider damage function for temperatures < 0.
+
+    damageFrac[idxTime] = info['damageCostRatio'] * ( info['a1'] * tAtmDamage + info['a2'] * tAtmDamage**info['a3'] )
+    yGrossDICE =  (info['al'][idxTime]  * info['L'][idxTime] **(1 - info['gama'])) * (max(state['k'],epsilon)**info['gama'])
+    if COINmode:
+        yGross[idxTime] = (1 - damageFrac[idxTime]) 
+    else:
+        # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
+        yGross[idxTime] = yGrossDICE
+    damages[idxTime] =  damageFrac[idxTime] * yGrossDICE
+
+    eGross[idxTime] = yGross[idxTime] * info['sigma'][idxTime] # what industrial emissions would be in the absence of abatement
+
 
     mcAbate[idxTime] = 1.e20
 
@@ -646,6 +666,7 @@ def dstatedt(state, info):
         miuTech[idxTime,idxTech] = miu[idxTime] * miuRatios[idxTime,idxTech]
         mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* max(epsilon,miuTech[idxTime,idxTech])**(expcost2 - 1.0))
         mcAbate[idxTime] = min(mcAbate[idxTime],mcAbateTech[idxTime,idxTech]) 
+
 
 
     abateCost[idxTime] = 0.0
@@ -672,12 +693,8 @@ def dstatedt(state, info):
 
     abateFrac[idxTime] = abateCost[idxTime] / yGross[idxTime]    # <abateCost> is total of abatement this time step 
 
-    # Climate damage cost at t
-    damageFrac[idxTime] = info['damageCostRatio'] * ( info['a1'] * tAtmState + info['a2'] * tAtmState**info['a3'] )
-    damages[idxTime] = yGross[idxTime] * damageFrac[idxTime]
-
     # Gross domestic product NET of damage and abatement costs at t ($ 2005 per year)
-    y[idxTime] = yGross[idxTime] - damages[idxTime] - abateCost[idxTime]
+    y[idxTime] = yGrossDICE - damages[idxTime] - abateCost[idxTime]
 
     # Investment at time t
     if info['optSavings']:
@@ -751,11 +768,11 @@ def dstatedt(state, info):
     # tendencies for recording
     k[idxTime] = state['k']
     dk[idxTime] = dstate['k']
-    tatm[idxTime] = tAtmState
-
     cumAbateTech[idxTime] = state['cumAbateTech']
 
-    if not COINmode:
+    if  COINmode:
+        tatm[idxTime] = info['alpha']*state['cumETot']
+    else:
         dtatm[idxTime] = dstate['tatm']
         tocean[idxTime] = tOceanState
         dtocean[idxTime] = dstate['tocean']
@@ -818,7 +835,7 @@ def DICE_fun(act,state,info):
     nTimeSteps = info['nTimeSteps']
 
     limMiuUpper = info['limMiuUpper']
-    limMiuLower =info['limMiuLower']
+    limMiuLower = info['limMiuLower']
 
     # ------------------------------------------------------------------------
     # 1. unpack act
@@ -835,6 +852,7 @@ def DICE_fun(act,state,info):
             miuDecisions[idx] = act[icount]
             icount += 1
     info['miuDecisions'] = miuDecisions
+
     # -----> initialize miuRatio decisions
 
     sequentialDecisions = np.reshape(act[icount:icount+nDecisionTimes * (nTechs-1)],(nTechs-1,nDecisionTimes)) 
@@ -852,9 +870,22 @@ def DICE_fun(act,state,info):
     # -----> initialize savings decisions
 
     if info['optSavings']:
-        savings = np.array(act[-nSavingDecisionTimes:])
+        if info['optSavingTimes']:
+            nOptSavingTimes = nSavingDecisionTimes - 2
+            savingDecisionTimes = info['savingDecisionTimes']
+            for idx in range(nOptSavingTimes):
+                savingDecisionTimes[1+idx] = act[-nOptSavingTimes + idx]
+            info['savingDecisionTimes'] = savingDecisionTimes
+        else:
+            nOptSavingTimes = 0
+ 
+        savings = np.array(act[-(nSavingDecisionTimes+nOptSavingTimes):][:nSavingDecisionTimes]) # this works when nOptSavingsTimes == 0
+        #print(savings)
+        #print(act)
     else: # specified savings
-        savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
+        savings = np.array([info['optlrsav'] for item in info['savingDecisionTimes']])
+
+
 
     # ------------------------------------------------------------------------
     # 2. now interpolate across time steps
@@ -876,7 +907,23 @@ def DICE_fun(act,state,info):
         miuRatios[:,idxTech] = np.interp(tlist,info['decisionTimes'],miuRatioDecisions[:,idxTech])
     info['miuRatios'] = miuRatios
 
-    info['savings'] = np.interp(tlist,info['savingDecisionTimes'],savings)
+    # -----------interpolate decision times; note decision times may not be monotonic if decision times are optimized
+    if info['optSavingTimes']:
+        xy = np.transpose((info['savingDecisionTimes'],savings))
+        xy = xy[xy[:,0].argsort()]
+        x = xy[:,0]
+        y = xy[:,1]
+        #print (xy,x,y)
+    else:
+        x = info['savingDecisionTimes']
+        y = savings
+    if info['splineDecisionTimes']:
+        intCoeff = interpolate.splrep(x,y)
+        info['savings']= interpolate.splev(tlist, intCoeff)
+    else:
+        #print(info['savingDecisionTimes'])
+        #print(savings)
+        info['savings'] = np.interp(tlist,x,y)
     
     # ------------------------------------------------------------------------
     # 3. now time step the action
@@ -983,18 +1030,31 @@ class DICE_instance:
             savingsUpper = np.ones( nSavingDecisionTimes )
             savingsLower = np.zeros(nSavingDecisionTimes)
             savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
-            if not COINmode:
-                savings[-1] = 0.0 # assume last time period is zero
+            savings[-1] = 0.0 # assume last time period is zero as starting for optimizer
         else: # no savings
             savingsUpper = np.zeros(0)
             savingsLower = np.zeros(0)
             savings = np.zeros(0)
 
+        if info['optSavings'] and info['optSavingTimes']:
+            optTimes = info['savingDecisionTimes'][1:-1] # first and last are fixed
+            optTimesLower = np.array(optTimes)
+            optTimesUpper = np.array(optTimes)
+            optTimesLower[:] = info['savingDecisionTimes'][0]
+            optTimesUpper[:] = info['savingDecisionTimes'][-1]
+        else:
+            optTimes = np.zeros(0)
+            optTimesLower = np.zeros(0)
+            optTimesUpper = np.zeros(0)
+
         # ----> put together actions
 
-        act = np.concatenate((miuDecisions,np.ravel(miuRatioDecisions),savings))
-        actUpper = np.concatenate((miuUpper,np.ravel(miuRatioUpper),savingsUpper))
-        actLower = np.concatenate((miuLower,np.ravel(miuRatioLower),savingsLower))
+        #print (optTimes)
+        #print(optTimesUpper)
+        #print(optTimesLower)
+        act = np.concatenate((miuDecisions,np.ravel(miuRatioDecisions),savings,optTimes))
+        actUpper = np.concatenate((miuUpper,np.ravel(miuRatioUpper),savingsUpper,optTimesUpper))
+        actLower = np.concatenate((miuLower,np.ravel(miuRatioLower),savingsLower,optTimesLower))
 
         ########################################################################
         ### Step 1: Problem definition     #####################################
