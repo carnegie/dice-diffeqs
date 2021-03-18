@@ -73,6 +73,7 @@ Use with Process_Inputs_Nash.py.
 """
 
 import numpy as np
+import itertools as it
 import utils
 import copy
 from plot_utilities import *
@@ -188,10 +189,10 @@ def initStateInfo(kwargs):
     else:
         info['savingDecisionTimes'] = decisionTimes    # savings rate decision times?
       
-    if 'splineDecisionTimes' in kwargs.keys():
-        info['splineDecisionTimes'] = kwargs['splineDecisionTimes']
+    if 'decisionInterpOrder' in kwargs.keys():
+        info['decisionInterpOrder'] = kwargs['decisionInterpOrder']
     else:
-        info['splineDecisionTimes'] = False
+        info['decisionInterpOrder'] = 1 # right now, default is linear interpolation
 
     #---------------------------------------------------------------------------------------------
     #-----> techLearningCurve: Does the technology have a learning curve? 
@@ -316,7 +317,7 @@ def initStateInfo(kwargs):
 
 
     if COINmode:
-        info['L']= [1]*nTimeSteps
+        info['L']= [1.0]*nTimeSteps
 
         state['k']=1.0
         info['sigma'] = 1.01**-tlist # the units on sigma are relative to base case emissions
@@ -649,15 +650,15 @@ def dstatedt(state, info):
     tAtmDamage = max(0.0, tAtmState)  # do not consider damage function for temperatures < 0.
 
     damageFrac[idxTime] = info['damageCostRatio'] * ( info['a1'] * tAtmDamage + info['a2'] * tAtmDamage**info['a3'] )
-    yGrossDICE =  (info['al'][idxTime]  * info['L'][idxTime] **(1 - info['gama'])) * (max(state['k'],epsilon)**info['gama'])
+
+    yGrossPotential =  (info['al'][idxTime]  * info['L'][idxTime] **(1 - info['gama'])) * (max(state['k'],epsilon)**info['gama'])
+    
     if COINmode:
-        yGross[idxTime] = (1 - damageFrac[idxTime]) 
+        yGross[idxTime] = (1 - damageFrac[idxTime]) * yGrossPotential
     else:
         # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
-        yGross[idxTime] = yGrossDICE
-    damages[idxTime] =  damageFrac[idxTime] * yGrossDICE
-
-    eGross[idxTime] = yGross[idxTime] * info['sigma'][idxTime] # what industrial emissions would be in the absence of abatement
+        yGross[idxTime] = yGrossPotential
+    damages[idxTime] =  damageFrac[idxTime] * yGrossPotential
 
 
     mcAbate[idxTime] = 1.e20
@@ -667,6 +668,8 @@ def dstatedt(state, info):
         mcAbateTech[idxTime,idxTech] =   pBackTime[idxTime,idxTech] *(firstUnitFractionalCost[idxTech] + (1.0 - firstUnitFractionalCost[idxTech])* max(epsilon,miuTech[idxTime,idxTech])**(expcost2 - 1.0))
         mcAbate[idxTime] = min(mcAbate[idxTime],mcAbateTech[idxTime,idxTech]) 
 
+    # Industrial CO2 emission at t (tCO2)
+    eGross[idxTime] = yGross[idxTime] * info['sigma'][idxTime] # what industrial emissions would be in the absence of abatement
 
 
     abateCost[idxTime] = 0.0
@@ -683,7 +686,6 @@ def dstatedt(state, info):
 
     dstate['cumAbateTech'] = abateAmountTech[idxTime]
 
-    # Industrial CO2 emission at t (tCO2)
     eInd[idxTime] =  eGross[idxTime]  - abateAmount[idxTime] # industrial emissions
 
     # Forest-related CO2 emissions
@@ -694,7 +696,7 @@ def dstatedt(state, info):
     abateFrac[idxTime] = abateCost[idxTime] / yGross[idxTime]    # <abateCost> is total of abatement this time step 
 
     # Gross domestic product NET of damage and abatement costs at t ($ 2005 per year)
-    y[idxTime] = yGrossDICE - damages[idxTime] - abateCost[idxTime]
+    y[idxTime] = yGrossPotential - damages[idxTime] - abateCost[idxTime]
 
     # Investment at time t
     if info['optSavings']:
@@ -771,7 +773,7 @@ def dstatedt(state, info):
     cumAbateTech[idxTime] = state['cumAbateTech']
 
     if  COINmode:
-        tatm[idxTime] = info['alpha']*state['cumETot']
+        tatm[idxTime] = tAtmDamage
     else:
         dtatm[idxTime] = dstate['tatm']
         tocean[idxTime] = tOceanState
@@ -917,13 +919,27 @@ def DICE_fun(act,state,info):
     else:
         x = info['savingDecisionTimes']
         y = savings
-    if info['splineDecisionTimes']:
-        intCoeff = interpolate.splrep(x,y)
-        info['savings']= interpolate.splev(tlist, intCoeff)
-    else:
+
+    if 2 == info['decisionInterpOrder']:
+        #intCoeff = interpolate.splrep(x,y)
+        #info['savings']= interpolate.splev(tlist, intCoeff)
+        intPchip = interpolate.pchip(x,y)
+        info['savings']= intPchip (tlist)
+    elif 1 == info['decisionInterpOrder']:
         #print(info['savingDecisionTimes'])
         #print(savings)
         info['savings'] = np.interp(tlist,x,y)
+    elif 0 == info['decisionInterpOrder']: #0 == decisionInterpOrder; step function
+        info['savings'] = y[list(map(lambda t0:len([v for v in x if v <= t0])-1,tlist))]
+    elif -1 == info['decisionInterpOrder']:  # Step function of accumulated values
+        yAccum = np.array(list(it.accumulate(y)))
+        sTemp =  yAccum[list(map(lambda t0:len([v for v in x if v <= t0])-1,tlist))]
+        sTemp = [0.0 if s < 0.0 else s for s in sTemp]
+        sTemp = [1.0 if s > 1.0 else s for s in sTemp]
+        info['savings'] = sTemp
+    else:
+        info['savings']  = 0
+
     
     # ------------------------------------------------------------------------
     # 3. now time step the action
@@ -1027,10 +1043,19 @@ class DICE_instance:
         # -----> initialize savings decisions
 
         if info['optSavings']:
-            savingsUpper = np.ones( nSavingDecisionTimes )
-            savingsLower = np.zeros(nSavingDecisionTimes)
-            savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
-            savings[-1] = 0.0 # assume last time period is zero as starting for optimizer
+
+            if info['decisionInterpOrder'] >= 0: # find solutions for savings rates directly
+                savingsUpper = np.ones( nSavingDecisionTimes )
+                savingsLower = np.zeros(nSavingDecisionTimes)
+                savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
+                savings[-1] = 0.0 # assume last time period is zero as starting for optimizer
+            else: # find solutions where the optimizer is on steps in savings rate
+                savingsUpper = 0.1 * np.ones( nSavingDecisionTimes )
+                savingsLower = -0.1 * np.ones(nSavingDecisionTimes)
+                savingsUpper[0] = 1.0
+                savingsLower[0] = 0.0
+                savings = np.zeros(nSavingDecisionTimes)
+                savings[0] = info['optlrsav']                
         else: # no savings
             savingsUpper = np.zeros(0)
             savingsLower = np.zeros(0)
@@ -1173,5 +1198,7 @@ class DICE_instance:
         root_dir = "."
 
         return [problem,option,solution,info]
+
+# %%
 
 # %%
