@@ -123,7 +123,7 @@ def initStateInfo(kwargs):
     else:
         info['decisionTimes'] = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100, 110, 130,150,200,280,290,300]
        
-    timeEnd = max(info['decisionTimes'] )
+    timeEnd = info['decisionTimes'][-1] # assume last decision time is end of problem
     info['timeEnd'] = timeEnd
     tlist = np.arange(0,timeEnd+dt,dt)
     nTimeSteps = len(tlist)
@@ -320,12 +320,14 @@ def initStateInfo(kwargs):
         info['L']= [1.0]*nTimeSteps
 
         state['k']=1.0
-        info['sigma'] = 1.01**-tlist # the units on sigma are relative to base case emissions
+        #info['sigma'] = 1.01**-tlist # the units on sigma are relative to base case emissions
         #                              assumption is base case if sustained would warm 2 C in 100 years.
+        info['sigma'] =np.exp(- 0.01 * tlist)
         info['etree'] = np.zeros(len(tlist))
         
         dela = 0.01
-        info['al'] = (1.+dela)**tlist  # total factor productivity improving 1% per
+        #info['al'] = (1.+dela)**tlist  # total factor productivity improving 1% per
+        info['al'] =np.exp( dela * tlist)
         
         info['expcost2'] = 2 #  Exponent of control cost function               / 2.6  /
 
@@ -638,7 +640,7 @@ def dstatedt(state, info):
             # DICE-like representation
             pBackTime[idxTime,idxTech] = (
                 info['abatementCostRatio'] * info['techInitCost'][idxTech] * 
-                (1 - info['techLearningRate'][idxTech])**(idxTime*info['dt']) 
+                np.exp(-info['techLearningRate'][idxTech]*idxTime*info['dt']) 
             )
 
     #-------------------------------------------------------------------------------------------------
