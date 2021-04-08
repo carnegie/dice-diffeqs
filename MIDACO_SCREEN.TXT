@@ -1,0 +1,24 @@
+
+ MIDACO 6.0 (www.midaco-solver.com)
+ ----------------------------------
+
+ LICENSE-KEY:  Ken_Caldeira_(Carnegie_InSc_Stanford)_[ACADEMIC-SINGLE-USER]
+
+ ----------------------------------------
+ | OBJECTIVES    1 | PARALLEL        15 |
+ |--------------------------------------|
+ | N            99 | MAXEVAL     500000 |
+ | NI            0 | MAXTIME      86400 |
+ | M             0 | PRINTEVAL    10000 |
+ | ME            0 | SAVE2FILE        1 |
+ |--------------------------------------|
+ | PARAM[ 1] 1.0000000e+000 RANDOM-SEED |
+ | PARAM[ 3] 1.0000000e+002 ALGOSTOP    |
+ | PARAM[ 5] 1.0000000e+002 FOCUS       |
+ ----------------------------------------
+
+ [     EVAL,    TIME]        OBJECTIVE FUNCTION VALUE         VIOLATION OF G(X)
+ ------------------------------------------------------------------------------
+ [       15,       1]        F(X):       -38.87765893         VIO:     0.000000
+ [    10005,      18]        F(X):       -46.10735898         VIO:     0.000000
+ [    20010,      34]        F(X):       -46.16183563         VIO:     0.000000
