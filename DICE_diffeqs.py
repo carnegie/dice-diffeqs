@@ -78,6 +78,7 @@ import utils
 import copy
 from plot_utilities import *
 from scipy import interpolate
+import random
 #import copy
 import os
 import sys
@@ -189,20 +190,15 @@ def initStateInfo(kwargs):
     #----------------------------------------------------------------------------------------------
     # savings rate decision times?
 
-    if 'optSavingTimes' in kwargs.keys():
-        info['optSavingTimes'] = kwargs['optSavingTimes'] 
-    else:
-        info['optSavingTimes'] = False
-      
     if 'savingDecisionTimes' in kwargs.keys():
         info['savingDecisionTimes'] = kwargs['savingDecisionTimes']
     else:
         info['savingDecisionTimes'] = decisionTimes    # savings rate decision times?
       
-    if 'decisionInterpOrder' in kwargs.keys():
-        info['decisionInterpOrder'] = kwargs['decisionInterpOrder']
+    if 'decisionInterpSwitch' in kwargs.keys():
+        info['decisionInterpSwitch'] = kwargs['decisionInterpSwitch']
     else:
-        info['decisionInterpOrder'] = 1 # right now, default is linear interpolation
+        info['decisionInterpSwitch'] = 1 # right now, default is linear interpolation
 
     #---------------------------------------------------------------------------------------------
     #-----> techLearningCurve: Does the technology have a learning curve? 
@@ -282,12 +278,47 @@ def initStateInfo(kwargs):
     else:
         info['maxeval'] = 1000    
         
-    #-----> FOCUS midaco option 
+    #-----> SEED midaco options 
+
+    if 'SEED' in kwargs.keys():
+        info['SEED'] = kwargs['SEED']
+    else:
+        info['SEED'] = 0
+ 
+    #-----> FOCUS midaco options 
 
     if 'FOCUS' in kwargs.keys():
         info['FOCUS'] = kwargs['FOCUS']
     else:
         info['FOCUS'] = 0
+
+    #-----> ANTS midaco options 
+
+    if 'ANTS' in kwargs.keys():
+        info['ANTS'] = kwargs['ANTS']
+    else:
+        info['ANTS'] = 0
+
+    #-----> KERNEL midaco options 
+
+    if 'KERNEL' in kwargs.keys():
+        info['KERNEL'] = kwargs['KERNEL']
+    else:
+        info['KERNEL'] = 0
+       
+    #-----> ANTS midaco options 
+
+    if 'EVALSTOPint' in kwargs.keys():
+        info['EVALSTOPint'] = kwargs['EVALSTOPint']
+    else:
+        info['EVALSTOPint'] = 20000. # Interval for testing evaluation stop
+
+    #-----> KERNEL midaco options 
+
+    if 'EVALSTOPtol' in kwargs.keys():
+        info['EVALSTOPtol'] = kwargs['EVALSTOPtol']
+    else:
+        info['EVALSTOPtol'] = 1.e-10
        
 
    
@@ -347,7 +378,7 @@ def initStateInfo(kwargs):
     info['optlrsav'] = info['gama'] * ( info['depk'] + dela ) / ( info['depk'] + info['prstp'] )
 
     info['tau'] = info['gama']  / ( info['depk'] + info['prstp'] ) #  = info['K0']/info['Y0'] # time constant relating reference state gross production 
-    print (info['optlrsav'],info['tau'])
+    #print (info['optlrsav'],info['tau'])
 
 
     #info['tnopol'] =    Period before which no emissions controls base  / 45   /
@@ -399,9 +430,6 @@ def initStateInfo(kwargs):
     
     info['mcAbate'] = timeShape.copy()
     info['mcAbateTech'] = timeTechShape.copy()
-        
-    info['force'] = timeShape.copy()
-    info['outgoingLW'] = timeShape.copy() 
 
     info['miu'] = timeShape.copy() 
     info['miuTech'] = timeTechShape.copy()
@@ -502,8 +530,8 @@ def dstatedt(state, info):
     
     yGross[idxTime] = (1 - damageFrac[idxTime]) * yGrossPotential
 
-        # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
-        # DICE:  yGross[idxTime] = yGrossPotential
+    # Gross domestic product GROSS of damage and abatement costs at t ($ 2005 per year)
+    # DICE:  yGross[idxTime] = yGrossPotential
 
     # Industrial CO2 emission at t (tCO2)
     eGross[idxTime] = yGross[idxTime] * info['sigma'][idxTime] # what industrial emissions would be in the absence of abatement
@@ -511,13 +539,14 @@ def dstatedt(state, info):
 
     # When there is a limited carbon budget, to get the optimizer to optimizer we will charge the optimizer for
     # abatement and then not give it for 
-    
+
     miuEff = miu[idxTime]
+
     if (info['carbonBudget'] >= 0):
 
         remainingBudget = info['carbonBudget'] - state['cumEInd']
 
-        if remainingBudget <  eGross[idxTime] * (1 - miu[idxTime]):
+        if eGross[idxTime] * (1 - miu[idxTime]) > remainingBudget:
             miuEff = 1.0 -  remainingBudget / eGross[idxTime]
 
     mcAbate[idxTime] = 1.e20
@@ -538,6 +567,8 @@ def dstatedt(state, info):
 
         abateAmountTech[idxTime,idxTech] = eGross[idxTime]  * miuTech[idxTime,idxTech]
         abateAmount[idxTime] += abateAmountTech[idxTime,idxTech] 
+
+    # this next thing is a try to get convergence (this is hocus pocus superstition)
 
     dstate['cumAbateTech'] = abateAmountTech[idxTime]
 
@@ -597,6 +628,7 @@ def dstatedt(state, info):
     return dstate
 
 #%%
+# step function interpolation
 
 def interpStep(t, timePoints, dataPoints):
     # returns the value of the dataPoint with a time value 
@@ -609,6 +641,37 @@ def interpStep(t, timePoints, dataPoints):
         idx = max(0,idx-1)
         res = dataPoints[idx]
     return res
+
+#%%
+
+# interpolates to list with zero derivatives at data points
+
+def interpToListZeroDeriv(xList,xDataVals,yDataVals, dt):
+    # Interpolates with all joins having a slope of zero !!
+    # we assume that time periods are at least dt apart
+    xData = copy.copy(xDataVals)
+    yData = copy.copy(yDataVals)
+    order = np.argsort(xData)
+    xData = xData[order]
+    yData = yData[order]
+
+    idxRight = np.minimum(np.searchsorted(xData,xList),len(xData)-1)
+    idxLeft = idxRight - 1
+    yResult = []
+    for idx in range(len(xList)):
+        x = xList[idx]
+        x0 = xData[idxLeft[idx]]
+        y0 = yData[idxLeft[idx]]
+        x1 = xData[idxRight[idx]]
+        y1 = yData[idxRight[idx]]
+        if abs(x0-x1) >= dt :
+            y = (3.*x0*x1**2*y0 - x1**3*y0 - 2.*x**3*(y0 - y1) + 3.*x**2*(x0 + x1)*(y0 - y1) + 
+                    x0**3*y1 - 3.*x0**2*x1*y1 + 6.*x*x0*x1*(-y0 + y1))/(x0 - x1)**3
+        else:
+            y = (y0+y1)/2. # if x values differ by less than dt, return mean of y values
+        yResult.append(y)
+    return yResult
+
 
 #%%
 
@@ -636,9 +699,12 @@ def DICE_fun(act,state,info):
     # Initially we are going to assume that the only decision are the abatement
     # level MIU.
     # relies on globals <state> and <info>
-
+    savingDecisionTimes = info['savingDecisionTimes']
     nDecisionTimes = len(info['decisionTimes'])
-    nSavingDecisionTimes = len(info['savingDecisionTimes'])
+    nSavingDecisions  = len(savingDecisionTimes)
+    # double negatives mean find both time and value
+    nSavingValues = int( nSavingDecisions - 
+        len([num for num in savingDecisionTimes if num < 0])/2)
     nTechs = info['nTechs']  
     COINmode = info['COINmode'] 
     tlist = info['tlist']
@@ -685,8 +751,8 @@ def DICE_fun(act,state,info):
 
     if info['optSavings']:
         start = nMiuDecisions + nDecisionTimes * (nTechs - 1)
-        savings = np.array(act[start:start + nSavingDecisionTimes]) #
-        startFreeAbate = nMiuDecisions + nDecisionTimes * (nTechs-1) + nSavingDecisionTimes
+        savings = np.array(act[start:start + nSavingDecisions]) #
+        startFreeAbate = nMiuDecisions + nDecisionTimes * (nTechs-1) + nSavingDecisions
     else: # specified savings
         savings = np.array([info['optlrsav'] for item in info['savingDecisionTimes']])
         startFreeAbate = nMiuDecisions + nDecisionTimes * (nTechs-1)         
@@ -701,7 +767,10 @@ def DICE_fun(act,state,info):
     # or in terms of 
     # This would be converted to, miu = 0.8 and miuRatios = [0.25, 0.25, 0.25, 0.25]
 
-    miu =  np.interp(tlist,info['decisionTimes'],miuDecisions)
+    if 10 == info['decisionInterpSwitch']:  # zzero derivatives at data points
+        miu = miuDecisions[list(map(lambda t0:len([v for v in info['decisionTimes'] if v <= t0])-1,tlist))]
+    else:
+        miu =  np.interp(tlist,info['decisionTimes'],miuDecisions)
     info['miu'] = miu
 
     miuRatios = np.zeros((nTimeSteps,nTechs))
@@ -713,26 +782,55 @@ def DICE_fun(act,state,info):
 
     # -----------interpolate decisions to other times
 
-    x = info['savingDecisionTimes']
-    y = savings
+    if nSavingDecisions == nSavingValues:
+        x = savingDecisionTimes
+        y = savings
+    else:
+        x = np.zeros(nSavingValues)
+        y = np.zeros(nSavingValues)
+        idxPair = 0
+        iOdd = False
 
-    if 2 == info['decisionInterpOrder']:
+        for idx in range(nSavingDecisions):
+            if savingDecisionTimes[idx] < 0:
+                iOdd = not(iOdd)
+                if iOdd: # first of pair of negative numbers indicates time value
+                    if idxPair == 0:
+                        previous = savingDecisionTimes[0]
+                    else:
+                        previous = x[idxPair -1]
+                    following = savingDecisionTimes[-1]
+                    for v in savingDecisionTimes:
+                        if v > previous:
+                            following = v
+                            break
+                    #x[idxPair] =  (previous + dt) + savings[idx] * ((following-dt)-(previous + dt))
+                    x[idxPair] =   savings[idx] * (savingDecisionTimes[-1]-savingDecisionTimes[0])
+                else:
+                    y[idxPair] = savings[idx]
+                    idxPair += 1
+            else: #regular
+                x[idxPair] = savingDecisionTimes[idx]
+                y[idxPair] = savings[idx]
+                idxPair += 1
+            
+        order = np.argsort(x)
+        x = x[order]
+        #y = y[order]
+
+    if 3 == info['decisionInterpSwitch']:  # zzero derivatives at data points
+        info['savings'] = interpToListZeroDeriv(tlist,x,y,0.1*dt) # last number is tolerance for equality
+    elif 2 == info['decisionInterpSwitch']:  # spline
         #intCoeff = interpolate.splrep(x,y)
         #info['savings']= interpolate.splev(tlist, intCoeff)
         intPchip = interpolate.pchip(x,y)
         info['savings']= intPchip (tlist)
-    elif 1 == info['decisionInterpOrder']:
+    elif 1 == info['decisionInterpSwitch']: #linear
         #print(info['savingDecisionTimes'])
         #print(savings)
         info['savings'] = np.interp(tlist,x,y)
-    elif 0 == info['decisionInterpOrder']: #0 == decisionInterpOrder; step function
+    elif 0 == info['decisionInterpSwitch'] or 10 == info['decisionInterpSwitch']: #0 == decisionInterpSwitch; step function
         info['savings'] = y[list(map(lambda t0:len([v for v in x if v <= t0])-1,tlist))]
-    elif -1 == info['decisionInterpOrder']:  # Step function of accumulated values
-        yAccum = np.array(list(it.accumulate(y)))
-        sTemp =  yAccum[list(map(lambda t0:len([v for v in x if v <= t0])-1,tlist))]
-        sTemp = [0.0 if s < 0.0 else s for s in sTemp]
-        sTemp = [1.0 if s > 1.0 else s for s in sTemp]
-        info['savings'] = sTemp
     else:
         info['savings']  = 0
 
@@ -752,6 +850,7 @@ def DICE_fun(act,state,info):
 
     #obj = dt*np.sum(info['cemutotper'])+((state['k']-dt*dstate['k'])*(1+info['prstp'])**(-nTimeSteps*dt)-1)/info['tau']
     obj = dt*np.sum(info['cemutotper'])
+    info['npvUtility'] = obj
 
     return float(obj),info
 
@@ -801,8 +900,10 @@ class DICE_instance:
         savingDecisionTimes = info['savingDecisionTimes']
 
         nDecisionTimes = len(info['decisionTimes'])
-        nSavingDecisionTimes = len(info['savingDecisionTimes'])
-
+        nSavingDecisions = len(savingDecisionTimes)
+        # double negatives mean find both time and value
+        nSavingValues = nSavingDecisions - \
+            len([num for num in savingDecisionTimes if num < 0])/2
         nTechs =  info['nTechs'] # total number of technologies in resuls
 
         limMiuUpper = info['limMiuUpper']
@@ -812,7 +913,7 @@ class DICE_instance:
 
         nMiuDecisions = np.count_nonzero(limMiuUpper - limMiuLower) # This expression counts the number of different values
 
-        miuDecisions = np.zeros(nMiuDecisions) # create empty vector        
+        miuDecisions = np.zeros(nMiuDecisions) # start off assuming complete abatement 
         miuLower = np.zeros(nMiuDecisions) # create empty vector        
         miuUpper = np.zeros(nMiuDecisions) # create empty vector        
         icount = 0
@@ -820,13 +921,14 @@ class DICE_instance:
             if limMiuUpper[idx] > limMiuLower[idx]:
                 miuLower[icount] = limMiuLower[idx]
                 miuUpper[icount] = limMiuUpper[idx]
-                miuDecisions[icount] = ( miuLower[icount] + miuUpper[icount] )/2.
-                miuLower[icount]
+                miuDecisions[icount] = (miuUpper[icount] -miuLower[icount]) * (1.-np.exp(-decisionTimes[icount]/30.))
+                #                            start by guessing exponential to 1 with 30-yr efolding
                 icount += 1
 
         # -----> initialize miuRatio decisions
 
-        miuRatioDecisions = np.ones((nDecisionTimes,nTechs-1))/nTechs # start of assume all techs are created equal      
+        miuRatioDecisions = np.zeros((nDecisionTimes,nTechs-1))/nTechs # start at zero except first  
+        miuRatioDecisions[:,0] = 1.0    
         miuRatioLower = np.zeros((nDecisionTimes,nTechs-1)) # create array of zeros        
         miuRatioUpper = np.ones((nDecisionTimes,nTechs-1)) # create array of ones 
 
@@ -834,18 +936,26 @@ class DICE_instance:
 
         if info['optSavings']:
 
-            if info['decisionInterpOrder'] >= 0: # find solutions for savings rates directly
-                savingsUpper = np.ones( nSavingDecisionTimes )
-                savingsLower = np.zeros(nSavingDecisionTimes)
-                savings = np.array([info['optlrsav'] for i in info['savingDecisionTimes']])
-                savings[-1] = 0.0 # assume last time period is zero as starting for optimizer
-            else: # find solutions where the optimizer is on steps in savings rate
-                savingsUpper = 0.1 * np.ones( nSavingDecisionTimes )
-                savingsLower = -0.1 * np.ones(nSavingDecisionTimes)
-                savingsUpper[0] = 1.0
-                savingsLower[0] = 0.0
-                savings = np.zeros(nSavingDecisionTimes)
-                savings[0] = info['optlrsav']                
+
+            savingsUpper = np.ones( nSavingDecisions )
+            savingsLower = np.zeros(nSavingDecisions)
+            savings = np.array([info['optlrsav'] for i in savingDecisionTimes])
+            
+            if nSavingDecisions != nSavingValues: # some are search for times
+                
+                decisionIndices = np.zeros( int(nSavingDecisions - nSavingValues ))
+                
+                iOdd = False
+                icount = 0
+
+                for idx in range(nSavingDecisions):
+                    if savingDecisionTimes[idx] < 0:
+                        iOdd = not(iOdd)
+                        if iOdd:
+                            savings[idx] = -savingDecisionTimes[idx]/(savingDecisionTimes[-1]-savingDecisionTimes[0])
+
+            savings[-1] = 0.0 # assume last time period is zero as starting for optimizer
+            
         else: # no savings
             savingsUpper = np.zeros(0)
             savingsLower = np.zeros(0)
@@ -924,13 +1034,13 @@ class DICE_instance:
         ########################################################################
     
         option['param1']  = 0       # ACCURACY  (only affects constrained problems)
-        option['param2']  = 1       # SEED (integer)
+        option['param2']  = info['SEED']       # SEED (integer)
         option['param3']  = 0       # FSTOP (integer)
-        option['param4']  = 100     # ALGOSTOP (integer) 
-        option['param5']  = 0.0     # EVALSTOP  
+        option['param4']  = 0     # ALGOSTOP (integer) 
+        option['param5']  = info['EVALSTOPint'] + info['EVALSTOPtol'] # EVALSTOP  
         option['param6']  = info['FOCUS']     # FOCUS  
-        option['param7']  = 0     # ANTS  
-        option['param8']  = 0      # KERNEL  
+        option['param7']  = info['ANTS']    # ANTS  
+        option['param8']  = info['KERNEL']      # KERNEL -- default zero  
         option['param9']  = 0.0     # ORACLE  
         option['param10'] = 0.0     # PARETOMAX
         option['param11'] = 0.0     # EPSILON  
@@ -974,9 +1084,12 @@ class DICE_instance:
         info["saveOutput"] = True
     
         utility,info = DICE_fun(solution['x'],state,info)
+
+        info['utility'] = utility
         print(utility)
         root_dir = "."
 
         return [problem,option,solution,info]
 
 # 
+# %%

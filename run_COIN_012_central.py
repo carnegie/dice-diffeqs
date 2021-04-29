@@ -33,31 +33,31 @@ if __name__ == "__main__":
     #initCostList = np.setdiff1d(initCostList05,initCostList25)
 
     #initCostList = np.round(10.**-np.arange(1.7,2.05,0.05),6)
-    #initCostList = [10.,1.]
+    #initCostList = [0.01]
     #initCostList = [0.044668]
 
     initCostRef = 1.0                                                      
     rampOpts = ['budgeting','balancing','ramping']
-    rampOpts = ['budgeting']
+    #rampOpts = ['budgeting']
 
     rateOptDic = {"10pct":0.13750352374993496}
 
     initAmounts = [1e-6]
 
-    prefix = "COIN_011_central-e20.1e-10_" #  model_version_suite_
+    prefix = "COIN_012a_central_" #  model_version_suite_
     
     dt0 = 1.
-    maxEval = 250000
+    maxEval = 200000
 
-    sdt = [0,dt0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,170,200,240,260,280,300]
+    #sdt =  [0,dt0,-16,-1,-32,-2,-64,-3,-96,-6,-128,-4,-256,-5,-280,-7,300]
+    sdt =  [0,dt0,-30,-1,-60,-2,-90,-3,-120,-6,-150,-4,-200,-5,-280,-7,300]
 
-    for seedVal in [64,65,66]:
+    for seedVal in [104,105,106,107]:
         for initCost in initCostList:
             for rampOpt in rampOpts:
                 cBudget = -999 # flag for unlimited
                 if rampOpt == 'ramping':
                     # allow for savings rate discontinuity at 30 in ramp case
-                    sdt = [0,dt0,10,20,29.9999,30,40,50,60,70,80,90,100,110,120,130,140,150,170,200,240,260,280,300]
 
                     # assumes years 0, 1, 5, 10, 15, 20 ,25, 39
                     limLower = [0.,0.03333333333333333333,0.16666666666666666, 0.3333333333333333, 0.5, 0.6666666666666666, 0.8333333333333334, 1.,   
@@ -79,8 +79,6 @@ if __name__ == "__main__":
                     for initAmt in initAmounts:
                         for rateOpt in rateOptDic.keys():
 
-
-
                             if shiftOpt == 'shift':
                                 initAmount = initAmt
                             else:
@@ -89,13 +87,10 @@ if __name__ == "__main__":
                                 else:
                                     initAmount = 1.e80
 
-
-
                             caseName = (prefix + rampOpt + '_i' + str(initCost)
                                         + '_s' + str(seedVal)
                                         + '_m' + str(maxEval)
                                         )
-
 
                             # If no arg is given, run vanilla DICE
 
@@ -134,7 +129,7 @@ if __name__ == "__main__":
                                 #savingDecisionTimes =[0,30,60,90,120,150,200,260,280,300], # times for miu decisions
 
                                 savingDecisionTimes = sdt, # times for miu decisions
-                                decisionInterpSwitch = 1, # 0 = step function, 1 = linear, 2 = spline savings only
+                                decisionInterpSwitch = 3, # 0 = step function, 1 = linear, 2 = spline savings only
 
                                 techLearningCurve = [False,True], # does this technology have a learning curve (True) or a specified cost function (False)
                                 # NOTE: <learningCurveTech> must have a length of <nTechs>
@@ -164,7 +159,7 @@ if __name__ == "__main__":
 
                                 SEED= seedVal,
 
-                                FOCUS  = 30, # FOCUS parameter for midaco solver
+                                FOCUS  = 100, # FOCUS parameter for midaco solver
                                 ANTS = 81,
                                 KERNEL = 27,
 
@@ -173,13 +168,9 @@ if __name__ == "__main__":
                                 abatementCostRatio = 1.0 # scaling on abatement costs (multiplies costs above for all techs)
 
                             )
-
-
-                                
+                               
                             pickle_results('../dice-diffeqs_analyze/output',caseName,filter_dic(resultCentral.out))
 
                             write_CSV_from_pickle('../dice-diffeqs_analyze/output',caseName)
-
-
  
 # %%
