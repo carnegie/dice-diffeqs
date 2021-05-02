@@ -328,7 +328,7 @@ def initStateInfo(kwargs):
     info['tlist'] = tlist
     
     #** Preferences
-    info['elasmu'] = 1
+    info['elasmu'] = 1.45
 
     # DICE:    info['elasmu'] = 1.45 # Elasticity of marginal utility of consumption     /1.45 /
 
@@ -646,7 +646,7 @@ def interpStep(t, timePoints, dataPoints):
 
 # interpolates to list with zero derivatives at data points
 
-def interpToListZeroDeriv(xList,xDataVals,yDataVals, dt):
+def interpToListZeroDeriv(xList,xDataVals,yDataVals, dtTol):
     # Interpolates with all joins having a slope of zero !!
     # we assume that time periods are at least dt apart
     xData = copy.copy(xDataVals)
@@ -664,7 +664,7 @@ def interpToListZeroDeriv(xList,xDataVals,yDataVals, dt):
         y0 = yData[idxLeft[idx]]
         x1 = xData[idxRight[idx]]
         y1 = yData[idxRight[idx]]
-        if abs(x0-x1) >= dt :
+        if abs(x0-x1) >= dtTol :
             y = (3.*x0*x1**2*y0 - x1**3*y0 - 2.*x**3*(y0 - y1) + 3.*x**2*(x0 + x1)*(y0 - y1) + 
                     x0**3*y1 - 3.*x0**2*x1*y1 + 6.*x*x0*x1*(-y0 + y1))/(x0 - x1)**3
         else:
@@ -703,7 +703,7 @@ def DICE_fun(act,state,info):
     nDecisionTimes = len(info['decisionTimes'])
     nSavingDecisions  = len(savingDecisionTimes)
     # double negatives mean find both time and value
-    nSavingValues = int( nSavingDecisions - 
+    nSavingRates = int( nSavingDecisions - 
         len([num for num in savingDecisionTimes if num < 0])/2)
     nTechs = info['nTechs']  
     COINmode = info['COINmode'] 
@@ -782,21 +782,23 @@ def DICE_fun(act,state,info):
 
     # -----------interpolate decisions to other times
 
-    if nSavingDecisions == nSavingValues:
+    if nSavingDecisions == nSavingRates:
         x = savingDecisionTimes
         y = savings
     else:
-        x = np.zeros(nSavingValues)
-        y = np.zeros(nSavingValues)
+        x = np.zeros(nSavingRates)
+        y = np.zeros(nSavingRates)
         idxPair = 0
         iOdd = False
+        nTimes = nSavingDecisions - nSavingRates
 
+        dtMin = 10.
         for idx in range(nSavingDecisions):
-            if savingDecisionTimes[idx] < 0:
+            if savingDecisionTimes[idx] < 0: 
                 iOdd = not(iOdd)
                 if iOdd: # first of pair of negative numbers indicates time value
                     if idxPair == 0:
-                        previous = savingDecisionTimes[0]
+                        previous = 0
                     else:
                         previous = x[idxPair -1]
                     following = savingDecisionTimes[-1]
@@ -805,21 +807,29 @@ def DICE_fun(act,state,info):
                             following = v
                             break
                     #x[idxPair] =  (previous + dt) + savings[idx] * ((following-dt)-(previous + dt))
-                    x[idxPair] =   savings[idx] * (savingDecisionTimes[-1]-savingDecisionTimes[0])
+                    maxSpace = (savingDecisionTimes[-1] - dtMin)  - (previous + dtMin) - dtMin * (nTimes - idxPair + 1)
+                    x[idxPair] =  previous + dtMin + savings[idx]**2 * maxSpace # saving squared is just an effort to try to front load values a bit
+                    previous = x[idxPair]
+                    #print (idx,idxPair,maxSpace,previous,savings[idx])
                 else:
                     y[idxPair] = savings[idx]
                     idxPair += 1
             else: #regular
+
                 x[idxPair] = savingDecisionTimes[idx]
                 y[idxPair] = savings[idx]
+                previous = x[idxPair]
                 idxPair += 1
-            
-        order = np.argsort(x)
-        x = x[order]
+    info['xSavings'] = x
+    info['ySavings'] = y
+        # This was the site of the brilliant x-only sort
+        # #order = np.argsort(x)
+        #x = x[order]
         #y = y[order]
 
     if 3 == info['decisionInterpSwitch']:  # zzero derivatives at data points
-        info['savings'] = interpToListZeroDeriv(tlist,x,y,0.1*dt) # last number is tolerance for equality
+        info['savings'] = interpToListZeroDeriv(tlist,x,y,0.1*dt) 
+        # last numbers are tolerance for equality
     elif 2 == info['decisionInterpSwitch']:  # spline
         #intCoeff = interpolate.splrep(x,y)
         #info['savings']= interpolate.splev(tlist, intCoeff)
@@ -902,7 +912,7 @@ class DICE_instance:
         nDecisionTimes = len(info['decisionTimes'])
         nSavingDecisions = len(savingDecisionTimes)
         # double negatives mean find both time and value
-        nSavingValues = nSavingDecisions - \
+        nSavingRates = nSavingDecisions - \
             len([num for num in savingDecisionTimes if num < 0])/2
         nTechs =  info['nTechs'] # total number of technologies in resuls
 
@@ -941,9 +951,9 @@ class DICE_instance:
             savingsLower = np.zeros(nSavingDecisions)
             savings = np.array([info['optlrsav'] for i in savingDecisionTimes])
             
-            if nSavingDecisions != nSavingValues: # some are search for times
+            if nSavingDecisions != nSavingRates: # some are search for times
                 
-                decisionIndices = np.zeros( int(nSavingDecisions - nSavingValues ))
+                decisionIndices = np.zeros( int(nSavingDecisions - nSavingRates ))
                 
                 iOdd = False
                 icount = 0
@@ -951,8 +961,8 @@ class DICE_instance:
                 for idx in range(nSavingDecisions):
                     if savingDecisionTimes[idx] < 0:
                         iOdd = not(iOdd)
-                        if iOdd:
-                            savings[idx] = -savingDecisionTimes[idx]/(savingDecisionTimes[-1]-savingDecisionTimes[0])
+                        if iOdd: # This next expression is close enough for our purposes.
+                            savings[idx] = -savingDecisionTimes[idx]
 
             savings[-1] = 0.0 # assume last time period is zero as starting for optimizer
             
